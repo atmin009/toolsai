@@ -116,12 +116,14 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
 
   if (!editor || !snap) return null;
 
+  const activeEditor = editor;
+
   function setBlockType(v: string) {
-    if (v === "paragraph") editor.chain().focus().setParagraph().run();
+    if (v === "paragraph") activeEditor.chain().focus().setParagraph().run();
     else if (v.startsWith("h")) {
       const level = Number(v.slice(1));
       if (level >= 1 && level <= 6) {
-        editor
+        activeEditor
           .chain()
           .focus()
           .setHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 })
@@ -131,17 +133,17 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
   }
 
   function setLink() {
-    const prev = editor.getAttributes("link").href as string | undefined;
+    const prev = activeEditor.getAttributes("link").href as string | undefined;
     const url = window.prompt("ลิงก์ (ว่างเพื่อลบ)", prev ?? "https://");
     if (url === null) return;
     const trimmed = url.trim();
-    if (trimmed === "") editor.chain().focus().extendMarkRange("link").unsetLink().run();
-    else editor.chain().focus().extendMarkRange("link").setLink({ href: trimmed }).run();
+    if (trimmed === "") activeEditor.chain().focus().extendMarkRange("link").unsetLink().run();
+    else activeEditor.chain().focus().extendMarkRange("link").setLink({ href: trimmed }).run();
   }
 
   function setImage() {
     const url = window.prompt("URL ของรูป", "https://");
-    if (url?.trim()) editor.chain().focus().setImage({ src: url.trim() }).run();
+    if (url?.trim()) activeEditor.chain().focus().setImage({ src: url.trim() }).run();
   }
 
   return (
@@ -168,35 +170,35 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
         <TBtn
           title="ตัวหนา"
           active={snap.bold}
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          onClick={() => activeEditor.chain().focus().toggleBold().run()}
         >
           <Bold className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="ตัวเอียง"
           active={snap.italic}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          onClick={() => activeEditor.chain().focus().toggleItalic().run()}
         >
           <Italic className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="ขีดเส้นใต้"
           active={snap.underline}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          onClick={() => activeEditor.chain().focus().toggleUnderline().run()}
         >
           <Underline className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="ขีดฆ่า"
           active={snap.strike}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          onClick={() => activeEditor.chain().focus().toggleStrike().run()}
         >
           <Strikethrough className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="โค้ดอินไลน์"
           active={snap.code}
-          onClick={() => editor.chain().focus().toggleCode().run()}
+          onClick={() => activeEditor.chain().focus().toggleCode().run()}
         >
           <Code className="h-4 w-4" />
         </TBtn>
@@ -204,28 +206,28 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
         <TBtn
           title="จัดชิดซ้าย"
           active={snap.al}
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          onClick={() => activeEditor.chain().focus().setTextAlign("left").run()}
         >
           <AlignLeft className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="จัดกึ่งกลาง"
           active={snap.ac}
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          onClick={() => activeEditor.chain().focus().setTextAlign("center").run()}
         >
           <AlignCenter className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="จัดชิดขวา"
           active={snap.ar}
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          onClick={() => activeEditor.chain().focus().setTextAlign("right").run()}
         >
           <AlignRight className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="จัดเต็มบรรทัด"
           active={snap.aj}
-          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          onClick={() => activeEditor.chain().focus().setTextAlign("justify").run()}
         >
           <AlignJustify className="h-4 w-4" />
         </TBtn>
@@ -233,28 +235,28 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
         <TBtn
           title="รายการหัวข้อย่อย"
           active={snap.bullet}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          onClick={() => activeEditor.chain().focus().toggleBulletList().run()}
         >
           <List className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="ลำดับเลข"
           active={snap.ordered}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          onClick={() => activeEditor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="อ้างอิง"
           active={snap.blockquote}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          onClick={() => activeEditor.chain().focus().toggleBlockquote().run()}
         >
           <Quote className="h-4 w-4" />
         </TBtn>
         <TBtn
           title="บล็อกโค้ด"
           active={snap.codeBlock}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          onClick={() => activeEditor.chain().focus().toggleCodeBlock().run()}
         >
           <FileCode2 className="h-4 w-4" />
         </TBtn>
@@ -268,7 +270,7 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
         <TBtn
           title="แทรกตาราง 3×3"
           onClick={() =>
-            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+            activeEditor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
           }
         >
           <Table2 className="h-4 w-4" />
@@ -276,18 +278,18 @@ export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
         <TBtn
           title="ลบตาราง"
           disabled={!snap.inTable}
-          onClick={() => editor.chain().focus().deleteTable().run()}
+          onClick={() => activeEditor.chain().focus().deleteTable().run()}
         >
           <Trash2 className="h-4 w-4" />
         </TBtn>
-        <TBtn title="เส้นคั่น" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+        <TBtn title="เส้นคั่น" onClick={() => activeEditor.chain().focus().setHorizontalRule().run()}>
           <Minus className="h-4 w-4" />
         </TBtn>
         <ToolbarSep />
-        <TBtn title="เลิกทำ" disabled={!snap.canUndo} onClick={() => editor.chain().focus().undo().run()}>
+        <TBtn title="เลิกทำ" disabled={!snap.canUndo} onClick={() => activeEditor.chain().focus().undo().run()}>
           <Undo2 className="h-4 w-4" />
         </TBtn>
-        <TBtn title="ทำซ้ำ" disabled={!snap.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+        <TBtn title="ทำซ้ำ" disabled={!snap.canRedo} onClick={() => activeEditor.chain().focus().redo().run()}>
           <Redo2 className="h-4 w-4" />
         </TBtn>
       </div>
