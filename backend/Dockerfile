@@ -1,7 +1,5 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache netcat-openbsd
-
 WORKDIR /app
 
 COPY package.json package-lock.json ./
