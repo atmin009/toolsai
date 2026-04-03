@@ -1,25 +1,4 @@
 services:
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: zettaword
-      MYSQL_USER: zettaword
-      MYSQL_PASSWORD: zettaword
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-zettaword-root}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" || exit 1',
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 20s
-
   backend:
     build:
       context: ./backend
@@ -28,16 +7,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: "4000"
-      DATABASE_URL: mysql://zettaword:zettaword@mysql:3306/zettaword
+      # ใช้ DATABASE_URL จาก .env เพื่อเชื่อม MySQL ภายนอก
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-docker}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-    depends_on:
-      mysql:
-        condition: service_healthy
     healthcheck:
       test:
         [
@@ -63,6 +40,3 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-
-volumes:
-  mysql_data:
