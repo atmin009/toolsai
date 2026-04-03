@@ -122,7 +122,7 @@ async function resolveWpCredentialsForTest(websiteId: string, override?: WpTestO
   return { root, auth: basicAuthHeader(user, pass) };
 }
 
-/** e.g. path `/wp/v2/users/me` — some hosts return 404 on `/wp-json`; fallback to `?rest_route=`. */
+/** e.g. path `/wp/v2/users/me` — some hosts 404 on `/wp-json`; WP then serves REST at `/index.php/wp-json/` or `?rest_route=`. */
 async function wpFetch(
   root: string,
   auth: { Authorization: string },
@@ -131,14 +131,21 @@ async function wpFetch(
 ): Promise<Response> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const primary = `${root}/wp-json${p}`;
+  const indexPhp = `${root}/index.php/wp-json${p}`;
   const alt = `${root}/?rest_route=${encodeURIComponent(p)}`;
   let res = await fetch(primary, { ...init, headers: { ...auth, ...init?.headers } });
+  if (res.status === 404) {
+    res = await fetch(indexPhp, { ...init, headers: { ...auth, ...init?.headers } });
+  }
   if (res.status === 404) {
     res = await fetch(alt, { ...init, headers: { ...auth, ...init?.headers } });
   } else if (res.status === 403) {
     const t = await res.clone().text();
     if (looksLikeHtmlResponse(t)) {
-      res = await fetch(alt, { ...init, headers: { ...auth, ...init?.headers } });
+      res = await fetch(indexPhp, { ...init, headers: { ...auth, ...init?.headers } });
+      if (res.status === 404) {
+        res = await fetch(alt, { ...init, headers: { ...auth, ...init?.headers } });
+      }
     }
   }
   return res;
@@ -155,15 +162,22 @@ async function wpFetchGet(
   const qStr = qs.toString();
   const pathWithQuery = `${path.startsWith("/") ? path : `/${path}`}${qStr ? `?${qStr}` : ""}`;
   const primary = `${root}/wp-json${pathWithQuery}`;
+  const indexPhp = `${root}/index.php/wp-json${pathWithQuery}`;
   const basePath = path.startsWith("/") ? path : `/${path}`;
   const alt = `${root}/?rest_route=${encodeURIComponent(basePath)}${qStr ? `&${qStr}` : ""}`;
   let res = await fetch(primary, { headers: { ...auth } });
+  if (res.status === 404) {
+    res = await fetch(indexPhp, { headers: { ...auth } });
+  }
   if (res.status === 404) {
     res = await fetch(alt, { headers: { ...auth } });
   } else if (res.status === 403) {
     const t = await res.clone().text();
     if (looksLikeHtmlResponse(t)) {
-      res = await fetch(alt, { headers: { ...auth } });
+      res = await fetch(indexPhp, { headers: { ...auth } });
+      if (res.status === 404) {
+        res = await fetch(alt, { headers: { ...auth } });
+      }
     }
   }
   return res;
@@ -200,24 +214,28 @@ async function uploadMediaFromUrl(
   if (!fetched) return null;
   const filename = `zettaword-cover-${Date.now()}.${fetched.ext}`;
   const path = "/wp/v2/media";
+  const postHeaders = {
+    ...auth,
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Content-Type": fetched.contentType,
+  };
   let res = await fetch(`${root}/wp-json${path}`, {
     method: "POST",
-    headers: {
-      ...auth,
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Content-Type": fetched.contentType,
-    },
+    headers: postHeaders,
     body: fetched.buf,
   });
+  if (res.status === 404) {
+    res = await fetch(`${root}/index.php/wp-json${path}`, {
+      method: "POST",
+      headers: postHeaders,
+      body: fetched.buf,
+    });
+  }
   if (res.status === 404) {
     const alt = `${root}/?rest_route=${encodeURIComponent(path)}`;
     res = await fetch(alt, {
       method: "POST",
-      headers: {
-        ...auth,
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Type": fetched.contentType,
-      },
+      headers: postHeaders,
       body: fetched.buf,
     });
   }
