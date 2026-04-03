@@ -213,6 +213,17 @@ export function TopicsPage() {
           <Button size="sm" variant="secondary" onClick={() => bulkApprove.mutate(ids)} disabled={bulkApprove.isPending}>
             Approve
           </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              void api.post("/articles/bulk-generate", { ids });
+              qc.invalidateQueries({ queryKey: ["topics"] });
+              setSelected(new Set());
+            }}
+          >
+            Generate articles
+          </Button>
           <Button size="sm" variant="destructive" className="gap-1" onClick={() => bulkDelete.mutate(ids)} disabled={bulkDelete.isPending}>
             <Trash2 className="h-3.5 w-3.5" />
             Delete

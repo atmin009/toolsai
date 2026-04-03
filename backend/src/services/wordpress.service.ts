@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, TopicStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../errors/AppError";
 
@@ -502,6 +502,13 @@ export async function publishArticleToWordpress(
       },
     });
 
+    if (status === "publish") {
+      await prisma.plannedTopic.update({
+        where: { id: article.plannedTopicId },
+        data: { status: TopicStatus.published_later },
+      });
+    }
+
     return { wordpress: { id: post.id, link: post.link, status } };
   }
 
@@ -552,6 +559,13 @@ export async function publishArticleToWordpress(
       ...(opts?.wpTagIds !== undefined ? { wpTagIds: tagIds as Prisma.InputJsonValue } : {}),
     },
   });
+
+  if (status === "publish") {
+    await prisma.plannedTopic.update({
+      where: { id: article.plannedTopicId },
+      data: { status: TopicStatus.published_later },
+    });
+  }
 
   return { wordpress: { id: post.id, link: post.link, status } };
 }

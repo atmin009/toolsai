@@ -9,6 +9,7 @@ articleRouter.use(requireAuth);
 
 articleRouter.get("/", asyncHandler(articles.listArticles));
 articleRouter.post("/generate/:topicId", asyncHandler(articles.generateArticle));
+articleRouter.post("/bulk-generate", asyncHandler(articles.bulkGenerateArticles));
 articleRouter.get("/:id/export", asyncHandler(articles.exportArticle));
 articleRouter.get("/:id/score", asyncHandler(articles.scoreArticle));
 articleRouter.get("/:id/versions", asyncHandler(articles.listArticleVersions));

@@ -5,6 +5,7 @@ import { routeParam } from "../utils/routeParam";
 import * as articleService from "../services/article.service";
 import * as wordpressService from "../services/wordpress.service";
 import { parseTopicStatusQuery } from "../services/topic.service";
+import { bulkIdsSchema } from "../validation/topic.schema";
 
 export async function listArticles(req: Request, res: Response) {
   const websiteId = req.query.websiteId ? String(req.query.websiteId) : undefined;
@@ -22,6 +23,20 @@ export async function generateArticle(req: Request, res: Response) {
   const topicId = routeParam(req.params.topicId);
   const article = await articleService.generateArticleForTopic(topicId, req.user!.id);
   res.status(201).json({ article });
+}
+
+export async function bulkGenerateArticles(req: Request, res: Response) {
+  const body = parseBody(bulkIdsSchema, req.body);
+  const items = [];
+  for (const topicId of body.ids) {
+    try {
+      const article = await articleService.generateArticleForTopic(topicId, req.user!.id);
+      items.push(article);
+    } catch {
+      // ignore individual topic errors for bulk operation
+    }
+  }
+  res.status(201).json({ items });
 }
 
 export async function getArticle(req: Request, res: Response) {
