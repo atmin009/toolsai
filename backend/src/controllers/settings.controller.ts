@@ -10,11 +10,7 @@ export async function getSettings(req: Request, res: Response) {
   });
   res.json({
     appName: "Zettaword",
-    phase: "MVP — WordPress REST publish enabled per website",
-    features: {
-      wordpress: true,
-      publish: true,
-    },
+    features: {},
     hasOpenaiApiKey: !!u?.openaiApiKey?.trim(),
     hasGoogleApiKey: !!u?.googleApiKey?.trim(),
     hasClaudeApiKey: !!u?.claudeApiKey?.trim(),

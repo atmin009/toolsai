@@ -11,7 +11,6 @@ import { useI18n } from "@/i18n/I18nContext";
 
 type SettingsResponse = {
   appName: string;
-  phase: string;
   features: Record<string, boolean>;
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
@@ -83,7 +82,6 @@ export function SettingsPage() {
       <Card className="max-w-2xl border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
         <CardHeader>
           <CardTitle>{t("settings.appSection")}</CardTitle>
-          <CardDescription>{t("settings.appReadonly")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {q.isLoading && <p className="text-[var(--color-muted)]">{t("common.loading")}</p>}
@@ -92,10 +90,6 @@ export function SettingsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[var(--color-muted)]">{t("settings.name")}</span>
                 <span className="font-medium text-zinc-900">{q.data.appName}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[var(--color-muted)]">{t("settings.phase")}</span>
-                <Badge variant="secondary">{q.data.phase}</Badge>
               </div>
               {Object.keys(q.data.features).length > 0 && (
                 <div className="space-y-2">

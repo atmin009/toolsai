@@ -25,7 +25,7 @@ export function LoginPage() {
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "demo@zettaword.local", password: "password123" },
+    defaultValues: { email: "", password: "" },
   });
 
   const login = useMutation({
@@ -83,7 +83,6 @@ export function LoginPage() {
             <Button className="w-full" type="submit" disabled={login.isPending}>
               {login.isPending ? t("login.submitting") : t("login.submit")}
             </Button>
-            <p className="text-center text-xs text-[var(--color-muted)]">{t("login.demoHint")}</p>
           </form>
         </CardContent>
       </Card>

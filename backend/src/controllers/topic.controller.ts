@@ -17,7 +17,15 @@ export async function listTopics(req: Request, res: Response) {
     : undefined;
   const order = req.query.order ? (String(req.query.order) as "asc" | "desc") : undefined;
 
-  const items = await topicService.listTopics({
+  const cy = req.query.year != null ? parseInt(String(req.query.year), 10) : undefined;
+  const cm = req.query.month != null ? parseInt(String(req.query.month), 10) : undefined;
+  const calendarYear = cy != null && !Number.isNaN(cy) ? cy : undefined;
+  const calendarMonth = cm != null && !Number.isNaN(cm) ? cm : undefined;
+
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+
+  const result = await topicService.listTopics({
     websiteId,
     monthlyPlanId,
     status,
@@ -25,8 +33,12 @@ export async function listTopics(req: Request, res: Response) {
     q,
     sortBy,
     order,
+    calendarYear,
+    calendarMonth,
+    page,
+    limit,
   });
-  res.json({ items });
+  res.json(result);
 }
 
 export async function createManualTopic(req: Request, res: Response) {

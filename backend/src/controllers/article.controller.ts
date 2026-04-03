@@ -15,8 +15,10 @@ export async function listArticles(req: Request, res: Response) {
     ? (String(req.query.sortBy) as "date" | "updated" | "title")
     : undefined;
   const order = req.query.order ? (String(req.query.order) as "asc" | "desc") : undefined;
-  const items = await articleService.listArticles({ websiteId, q, topicStatus, sortBy, order });
-  res.json({ items });
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+  const result = await articleService.listArticles({ websiteId, q, topicStatus, sortBy, order, page, limit });
+  res.json(result);
 }
 
 export async function generateArticle(req: Request, res: Response) {

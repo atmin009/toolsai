@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Globe2,
   CalendarDays,
-  FileText,
   Settings,
   ListChecks,
   Newspaper,
@@ -113,10 +112,6 @@ export function AppLayout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 text-xs text-[var(--color-muted)] lg:flex">
-              <FileText className="h-3.5 w-3.5" />
-              {t("layout.aiBadge")}
-            </span>
             <UserMenu />
           </div>
         </header>

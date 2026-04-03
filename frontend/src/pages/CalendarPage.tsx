@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
@@ -19,16 +19,26 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useI18n } from "@/i18n/I18nContext";
+import { PaginationControls } from "@/components/PaginationControls";
+
+const LIST_PAGE_SIZE = 20;
 
 export function CalendarPage() {
   const tr = useI18n();
   const [year, setYear] = useState(2026);
   const [month, setMonth] = useState(4);
+  const [listPage, setListPage] = useState(1);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [year, month]);
 
   const topics = useQuery({
     queryKey: ["topics-calendar", year, month],
     queryFn: async () => {
-      const { data } = await api.get("/topics");
+      const { data } = await api.get("/topics", {
+        params: { year, month },
+      });
       return data as {
         items: {
           id: string;
@@ -37,6 +47,7 @@ export function CalendarPage() {
           status: string;
           monthlyPlan: { websiteId: string; year: number; month: number };
         }[];
+        total: number;
       };
     },
   });
@@ -51,8 +62,11 @@ export function CalendarPage() {
     });
   }, [year, month]);
 
-  const filtered =
-    topics.data?.items.filter((t) => t.monthlyPlan.year === year && t.monthlyPlan.month === month) ?? [];
+  const filtered = topics.data?.items ?? [];
+  const listSlice = useMemo(() => {
+    const start = (listPage - 1) * LIST_PAGE_SIZE;
+    return filtered.slice(start, start + LIST_PAGE_SIZE);
+  }, [filtered, listPage]);
 
   return (
     <div className="space-y-8">
@@ -77,43 +91,49 @@ export function CalendarPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-xs md:gap-3 md:text-sm">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div
-            key={d}
-            className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] md:text-xs"
-          >
-            {d}
-          </div>
-        ))}
-        {days.map((day) => {
-          const dayTopics = filtered.filter((t) => isSameDay(new Date(t.recommendedPublishDate), day));
-          const inMonth = isSameMonth(day, new Date(year, month - 1, 1));
-          return (
+      <div className="w-full overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+        <div className="grid min-w-[640px] grid-cols-7 gap-2 text-xs md:min-w-0 md:gap-3 md:text-sm">
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
             <div
-              key={day.toISOString()}
-              className={`flex min-h-[100px] flex-col rounded-xl border border-[var(--color-border)] p-2 shadow-sm md:min-h-[120px] md:p-3 ${
-                inMonth ? "bg-[var(--color-surface)]" : "bg-zinc-100/50"
-              }`}
+              key={d}
+              className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] md:text-xs"
             >
-              <div className={`mb-2 text-xs font-semibold ${inMonth ? "text-zinc-600" : "text-zinc-300"}`}>{format(day, "d")}</div>
-              <div className="flex flex-1 flex-col gap-1.5">
-                {dayTopics.map((t) => (
-                  <Link
-                    key={t.id}
-                    to={`/topics/${t.id}/review`}
-                    className="rounded-lg bg-violet-50 px-2 py-1.5 text-[10px] leading-snug text-violet-950 ring-1 ring-violet-100 transition-colors hover:bg-violet-100 md:text-[11px]"
-                  >
-                    <span className="line-clamp-2 block font-medium">{t.proposedTitle}</span>
-                    <div className="mt-1">
-                      <StatusBadge status={t.status} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              {d}
             </div>
-          );
-        })}
+          ))}
+          {days.map((day) => {
+            const dayTopics = filtered.filter((topic) => isSameDay(new Date(topic.recommendedPublishDate), day));
+            const inMonth = isSameMonth(day, new Date(year, month - 1, 1));
+            return (
+              <div
+                key={day.toISOString()}
+                className={`flex min-h-[96px] flex-col rounded-xl border border-[var(--color-border)] p-2 shadow-sm md:min-h-[128px] md:p-3 ${
+                  inMonth ? "bg-[var(--color-surface)]" : "bg-zinc-100/50"
+                }`}
+              >
+                <div className={`mb-1 shrink-0 text-xs font-semibold ${inMonth ? "text-zinc-600" : "text-zinc-300"}`}>
+                  {format(day, "d")}
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5 [scrollbar-width:thin] max-h-[min(220px,42vh)]">
+                  <div className="flex flex-col gap-1.5 pb-0.5">
+                    {dayTopics.map((topic) => (
+                      <Link
+                        key={topic.id}
+                        to={`/topics/${topic.id}/review`}
+                        className="block rounded-lg bg-violet-50 px-2 py-1.5 text-[10px] leading-snug text-violet-950 ring-1 ring-violet-100 transition-colors hover:bg-violet-100 md:text-[11px]"
+                      >
+                        <span className="block font-medium break-words">{topic.proposedTitle}</span>
+                        <div className="mt-1">
+                          <StatusBadge status={topic.status} />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
@@ -122,28 +142,38 @@ export function CalendarPage() {
           <CardDescription>{filtered.length} topics scheduled</CardDescription>
         </CardHeader>
         <CardContent className="p-0 sm:px-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>
-                    <Link className="font-medium text-violet-700 hover:underline" to={`/topics/${t.id}/review`}>
-                      {t.proposedTitle}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <StatusBadge status={t.status} />
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {listSlice.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="min-w-[12rem] max-w-[min(100vw-6rem,32rem)]">
+                      <Link className="font-medium text-violet-700 hover:underline break-words" to={`/topics/${row.id}/review`}>
+                        {row.proposedTitle}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <StatusBadge status={row.status} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {filtered.length > 0 && (
+            <PaginationControls
+              page={listPage}
+              total={filtered.length}
+              pageSize={LIST_PAGE_SIZE}
+              onPageChange={setListPage}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

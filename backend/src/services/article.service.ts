@@ -264,8 +264,14 @@ export async function listArticles(filters: {
   topicStatus?: TopicStatus;
   sortBy?: "date" | "updated" | "title";
   order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
 }) {
   const q = filters.q?.trim();
+  const page = Math.max(1, filters.page ?? 1);
+  const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+  const skip = (page - 1) * limit;
+
   const where: Prisma.ArticleWhereInput = {
     plannedTopic: {
       ...(filters.websiteId ? { monthlyPlan: { websiteId: filters.websiteId } } : {}),
@@ -290,22 +296,29 @@ export async function listArticles(filters: {
         ? { updatedAt: order }
         : { plannedTopic: { recommendedPublishDate: order } };
 
-  return prisma.article.findMany({
-    where,
-    orderBy,
-    include: {
-      plannedTopic: {
-        select: {
-          id: true,
-          proposedTitle: true,
-          status: true,
-          recommendedPublishDate: true,
-          source: true,
-          monthlyPlan: { select: { websiteId: true, year: true, month: true } },
+  const [items, total] = await prisma.$transaction([
+    prisma.article.findMany({
+      where,
+      orderBy,
+      skip,
+      take: limit,
+      include: {
+        plannedTopic: {
+          select: {
+            id: true,
+            proposedTitle: true,
+            status: true,
+            recommendedPublishDate: true,
+            source: true,
+            monthlyPlan: { select: { websiteId: true, year: true, month: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.article.count({ where }),
+  ]);
+
+  return { items, total, page, limit };
 }
 
 export async function exportArticleDocument(id: string, format: ExportFormat) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyPlus, Search, Trash2 } from "lucide-react";
@@ -14,6 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { nativeSelectClass } from "@/lib/input-classes";
 import { format } from "date-fns";
 import { useI18n } from "@/i18n/I18nContext";
+import { PaginationControls } from "@/components/PaginationControls";
+
+const PAGE_SIZE = 20;
 
 export function TopicsPage() {
   const t = useI18n();
@@ -26,6 +29,7 @@ export function TopicsPage() {
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [manualOpen, setManualOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const [manual, setManual] = useState({
     websiteId: "",
     year: new Date().getFullYear(),
@@ -39,6 +43,10 @@ export function TopicsPage() {
     recommendedPublishDate: new Date().toISOString().slice(0, 16),
   });
 
+  useEffect(() => {
+    setPage(1);
+  }, [websiteId, status, source, q, sortBy, order]);
+
   const websites = useQuery({
     queryKey: ["websites"],
     queryFn: async () => {
@@ -48,7 +56,7 @@ export function TopicsPage() {
   });
 
   const topics = useQuery({
-    queryKey: ["topics", websiteId, status, source, q, sortBy, order],
+    queryKey: ["topics", websiteId, status, source, q, sortBy, order, page],
     queryFn: async () => {
       const { data } = await api.get("/topics", {
         params: {
@@ -58,6 +66,8 @@ export function TopicsPage() {
           q: q.trim() || undefined,
           sortBy,
           order,
+          page,
+          limit: PAGE_SIZE,
         },
       });
       return data as {
@@ -68,6 +78,9 @@ export function TopicsPage() {
           status: string;
           source?: string;
         }[];
+        total: number;
+        page: number;
+        limit: number;
       };
     },
   });
@@ -237,7 +250,7 @@ export function TopicsPage() {
       <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
         <CardHeader>
           <CardTitle>All topics</CardTitle>
-          <CardDescription>{topics.data?.items.length ?? 0} results</CardDescription>
+          <CardDescription>{topics.data?.total ?? 0} results</CardDescription>
         </CardHeader>
         <CardContent className="p-0 sm:px-0">
           {topics.isLoading && <p className="p-6 text-sm text-[var(--color-muted)]">Loading…</p>}
@@ -261,31 +274,40 @@ export function TopicsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topics.data?.items.map((t) => (
-                  <TableRow key={t.id}>
+                {topics.data?.items.map((row) => (
+                  <TableRow key={row.id}>
                     <TableCell>
                       <input
                         type="checkbox"
                         className="rounded border-[var(--color-border)]"
-                        checked={selected.has(t.id)}
-                        onChange={() => toggle(t.id)}
-                        aria-label={`Select ${t.proposedTitle}`}
+                        checked={selected.has(row.id)}
+                        onChange={() => toggle(row.id)}
+                        aria-label={`Select ${row.proposedTitle}`}
                       />
                     </TableCell>
                     <TableCell>
-                      <Link to={`/topics/${t.id}/review`} className="font-medium text-violet-700 hover:underline">
-                        {t.proposedTitle}
+                      <Link to={`/topics/${row.id}/review`} className="font-medium text-violet-700 hover:underline">
+                        {row.proposedTitle}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-[var(--color-muted)]">{format(new Date(t.recommendedPublishDate), "PPp")}</TableCell>
-                    <TableCell className="capitalize text-[var(--color-muted)]">{t.source ?? "planner"}</TableCell>
+                    <TableCell className="text-[var(--color-muted)]">{format(new Date(row.recommendedPublishDate), "PPp")}</TableCell>
+                    <TableCell className="capitalize text-[var(--color-muted)]">{row.source ?? "planner"}</TableCell>
                     <TableCell className="text-right">
-                      <StatusBadge status={t.status} />
+                      <StatusBadge status={row.status} />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          )}
+          {topics.data && (
+            <PaginationControls
+              page={topics.data.page}
+              total={topics.data.total}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              disabled={topics.isFetching}
+            />
           )}
         </CardContent>
       </Card>

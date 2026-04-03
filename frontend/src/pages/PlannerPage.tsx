@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { nativeSelectClass } from "@/lib/input-classes";
 import { PlannerRangePicker } from "@/components/planner/PlannerRangePicker";
+import { PaginationControls } from "@/components/PaginationControls";
 import { buildPlannerDayChunks, type PlannerGranularity } from "@/lib/planner-chunks";
 import {
   format,
@@ -25,6 +26,8 @@ import {
   endOfWeek,
 } from "date-fns";
 import { useI18n } from "@/i18n/I18nContext";
+
+const PLANNER_LIST_PAGE_SIZE = 20;
 
 export function PlannerPage() {
   const tr = useI18n();
@@ -47,6 +50,7 @@ export function PlannerPage() {
   const [rangeStartDay, setRangeStartDay] = useState<number | null>(null);
   const [rangeEndDay, setRangeEndDay] = useState<number | null>(null);
   const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [listPage, setListPage] = useState(1);
   /** Incremental planner: which day-range chunk is running */
   const [chunkProgress, setChunkProgress] = useState<{
     current: number;
@@ -94,6 +98,10 @@ export function PlannerPage() {
     setRangeStartDay(null);
     setRangeEndDay(null);
   }, [year, month]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [websiteId, year, month]);
 
   const canGenerate = !!websiteId && (!limitRange || (rangeStartDay != null && rangeEndDay != null));
 
@@ -191,6 +199,11 @@ export function PlannerPage() {
   }, [year, month]);
 
   const topics = planQuery.data?.topics ?? [];
+
+  const topicsListSlice = useMemo(() => {
+    const start = (listPage - 1) * PLANNER_LIST_PAGE_SIZE;
+    return topics.slice(start, start + PLANNER_LIST_PAGE_SIZE);
+  }, [topics, listPage]);
 
   return (
     <div className="space-y-8">
@@ -372,66 +385,84 @@ export function PlannerPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 sm:px-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{tr("planner.colTitle")}</TableHead>
-                  <TableHead>{tr("planner.colDate")}</TableHead>
-                  <TableHead className="text-right">{tr("planner.colStatus")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topics.map((topic) => (
-                  <TableRow key={topic.id}>
-                    <TableCell>
-                      <Link className="font-medium text-violet-700 hover:underline" to={`/topics/${topic.id}/review`}>
-                        {topic.proposedTitle}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-[var(--color-muted)]">{format(new Date(topic.recommendedPublishDate), "PPP")}</TableCell>
-                    <TableCell className="text-right">
-                      <StatusBadge status={topic.status} />
-                    </TableCell>
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{tr("planner.colTitle")}</TableHead>
+                    <TableHead>{tr("planner.colDate")}</TableHead>
+                    <TableHead className="text-right">{tr("planner.colStatus")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {topicsListSlice.map((topic) => (
+                    <TableRow key={topic.id}>
+                      <TableCell className="min-w-[12rem] max-w-[min(100vw-6rem,28rem)]">
+                        <Link className="break-words font-medium text-violet-700 hover:underline" to={`/topics/${topic.id}/review`}>
+                          {topic.proposedTitle}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-[var(--color-muted)]">
+                        {format(new Date(topic.recommendedPublishDate), "PPP")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <StatusBadge status={topic.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {topics.length > 0 && (
+              <PaginationControls
+                page={listPage}
+                total={topics.length}
+                pageSize={PLANNER_LIST_PAGE_SIZE}
+                onPageChange={setListPage}
+              />
+            )}
           </CardContent>
         </Card>
       )}
 
       {websiteId && planQuery.data?.plan && view === "calendar" && (
-        <div className="grid grid-cols-7 gap-2 text-xs md:gap-3 md:text-sm">
-          {weekDayLabels.map((d) => (
-            <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] md:text-xs">
-              {d}
-            </div>
-          ))}
-          {days.map((day) => {
-            const dayTopics = topics.filter((topic) => isSameDay(new Date(topic.recommendedPublishDate), day));
-            const inMonth = isSameMonth(day, new Date(year, month - 1, 1));
-            return (
-              <div
-                key={day.toISOString()}
-                className={`flex min-h-[100px] flex-col rounded-xl border border-[var(--color-border)] p-2 shadow-sm md:min-h-[120px] md:p-3 ${
-                  inMonth ? "bg-[var(--color-surface)]" : "bg-zinc-100/50"
-                }`}
-              >
-                <div className={`mb-2 text-xs font-semibold ${inMonth ? "text-zinc-600" : "text-zinc-300"}`}>{format(day, "d")}</div>
-                <div className="flex flex-1 flex-col gap-1.5">
-                  {dayTopics.map((topic) => (
-                    <Link
-                      key={topic.id}
-                      to={`/topics/${topic.id}/review`}
-                      className="line-clamp-2 rounded-lg bg-violet-50 px-2 py-1.5 text-[10px] font-medium leading-snug text-violet-950 ring-1 ring-violet-100 transition-colors hover:bg-violet-100 md:text-[11px]"
-                    >
-                      {topic.proposedTitle}
-                    </Link>
-                  ))}
-                </div>
+        <div className="w-full overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+          <div className="grid min-w-[640px] grid-cols-7 gap-2 text-xs md:min-w-0 md:gap-3 md:text-sm">
+            {weekDayLabels.map((d) => (
+              <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)] md:text-xs">
+                {d}
               </div>
-            );
-          })}
+            ))}
+            {days.map((day) => {
+              const dayTopics = topics.filter((topic) => isSameDay(new Date(topic.recommendedPublishDate), day));
+              const inMonth = isSameMonth(day, new Date(year, month - 1, 1));
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`flex min-h-[96px] flex-col rounded-xl border border-[var(--color-border)] p-2 shadow-sm md:min-h-[128px] md:p-3 ${
+                    inMonth ? "bg-[var(--color-surface)]" : "bg-zinc-100/50"
+                  }`}
+                >
+                  <div className={`mb-1 shrink-0 text-xs font-semibold ${inMonth ? "text-zinc-600" : "text-zinc-300"}`}>
+                    {format(day, "d")}
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5 [scrollbar-width:thin] max-h-[min(220px,42vh)]">
+                    <div className="flex flex-col gap-1.5 pb-0.5">
+                      {dayTopics.map((topic) => (
+                        <Link
+                          key={topic.id}
+                          to={`/topics/${topic.id}/review`}
+                          className="block rounded-lg bg-violet-50 px-2 py-1.5 text-[10px] font-medium leading-snug text-violet-950 ring-1 ring-violet-100 transition-colors hover:bg-violet-100 md:text-[11px]"
+                        >
+                          <span className="block break-words">{topic.proposedTitle}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

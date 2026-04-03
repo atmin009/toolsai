@@ -11,7 +11,6 @@ export const th: Record<string, string> = {
   "nav.articles": "บทความ",
   "nav.calendar": "ปฏิทิน",
   "nav.settings": "การตั้งค่า",
-  "layout.aiBadge": "มี AI ช่วย",
   "layout.mobileNav": "เปิดเมนู",
   "layout.footerNote": "วางแผน บทความ และเผยแพร่ไป WordPress ได้จากเว็บไซต์แต่ละแห่ง",
   "header.defaultTitle": "Zettaword",
@@ -48,8 +47,6 @@ export const th: Record<string, string> = {
   "login.submit": "เข้าสู่ระบบ",
   "login.submitting": "กำลังเข้าสู่ระบบ…",
   "login.error": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
-  "login.demoHint": "บัญชีทดลองถ้ามี — ติดต่อผู้ดูแลระบบ",
-
   // User menu
   "user.signedInAs": "เข้าสู่ระบบเป็น",
   "user.settings": "การตั้งค่า",
@@ -66,6 +63,10 @@ export const th: Record<string, string> = {
   "common.back": "กลับ",
   "common.search": "ค้นหา",
   "common.notFound": "ไม่พบข้อมูล",
+  "pagination.prev": "ก่อนหน้า",
+  "pagination.next": "ถัดไป",
+  "pagination.pageOf": "หน้า {page} / {totalPages}",
+  "pagination.summary": "แสดง {from}–{to} จาก {total} รายการ",
 
   // Dashboard
   "dashboard.title": "แดชบอร์ด",
@@ -91,9 +92,7 @@ export const th: Record<string, string> = {
   "settings.title": "การตั้งค่า",
   "settings.desc": "การตั้งค่าแอปและคีย์ API สำหรับผู้ให้บริการ AI",
   "settings.appSection": "แอปพลิเคชัน",
-  "settings.appReadonly": "อ่านอย่างเดียวใน MVP — ขยายเมื่อมีการตั้งค่าระดับองค์กร",
   "settings.name": "ชื่อ",
-  "settings.phase": "เฟส",
   "settings.features": "ฟีเจอร์",
   "settings.wpNote":
     "เชื่อม WordPress ได้ที่รายละเอียดแต่ละเว็บไซต์ — ใช้ Application Password และส่งบทความจากตัวแก้ไข",

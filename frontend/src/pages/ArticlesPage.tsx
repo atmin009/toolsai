@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClass } from "@/lib/input-classes";
 import { useI18n } from "@/i18n/I18nContext";
+import { PaginationControls } from "@/components/PaginationControls";
+
+const PAGE_SIZE = 20;
 
 export function ArticlesPage() {
   const t = useI18n();
@@ -18,6 +21,11 @@ export function ArticlesPage() {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "updated" | "title">("date");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [websiteId, status, q, sortBy, order]);
 
   const websites = useQuery({
     queryKey: ["websites"],
@@ -28,7 +36,7 @@ export function ArticlesPage() {
   });
 
   const articles = useQuery({
-    queryKey: ["articles", websiteId, status, q, sortBy, order],
+    queryKey: ["articles", websiteId, status, q, sortBy, order, page],
     queryFn: async () => {
       const { data } = await api.get("/articles", {
         params: {
@@ -37,6 +45,8 @@ export function ArticlesPage() {
           q: q.trim() || undefined,
           sortBy,
           order,
+          page,
+          limit: PAGE_SIZE,
         },
       });
       return data as {
@@ -53,6 +63,9 @@ export function ArticlesPage() {
             source: string;
           };
         }[];
+        total: number;
+        page: number;
+        limit: number;
       };
     },
   });
@@ -112,7 +125,7 @@ export function ArticlesPage() {
       <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
         <CardHeader>
           <CardTitle>Library</CardTitle>
-          <CardDescription>{articles.data?.items.length ?? 0} articles</CardDescription>
+          <CardDescription>{articles.data?.total ?? 0} articles</CardDescription>
         </CardHeader>
         <CardContent className="p-0 sm:px-0">
           {articles.isLoading && <p className="p-6 text-sm text-[var(--color-muted)]">Loading…</p>}
@@ -148,6 +161,15 @@ export function ArticlesPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {articles.data && (
+            <PaginationControls
+              page={articles.data.page}
+              total={articles.data.total}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              disabled={articles.isFetching}
+            />
           )}
         </CardContent>
       </Card>

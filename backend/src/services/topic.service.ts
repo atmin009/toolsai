@@ -18,12 +18,32 @@ export async function listTopics(filters: {
   q?: string;
   sortBy?: "date" | "title" | "status" | "updated";
   order?: "asc" | "desc";
+  /** When both set, return all matching topics for the calendar (no pagination). */
+  calendarYear?: number;
+  calendarMonth?: number;
+  page?: number;
+  limit?: number;
 }) {
   const q = filters.q?.trim();
+  const calendarMode =
+    filters.calendarYear != null &&
+    filters.calendarMonth != null &&
+    filters.calendarYear >= 1970 &&
+    filters.calendarYear <= 2100 &&
+    filters.calendarMonth >= 1 &&
+    filters.calendarMonth <= 12;
+
+  const monthlyPlanWhere: Prisma.MonthlyPlanWhereInput = {
+    ...(filters.websiteId ? { websiteId: filters.websiteId } : {}),
+    ...(calendarMode
+      ? { year: filters.calendarYear!, month: filters.calendarMonth! }
+      : {}),
+  };
+
   const where: Prisma.PlannedTopicWhereInput = {
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.monthlyPlanId ? { monthlyPlanId: filters.monthlyPlanId } : {}),
-    ...(filters.websiteId ? { monthlyPlan: { websiteId: filters.websiteId } } : {}),
+    ...(Object.keys(monthlyPlanWhere).length > 0 ? { monthlyPlan: monthlyPlanWhere } : {}),
     ...(filters.source ? { source: filters.source } : {}),
     ...(q
       ? {
@@ -43,14 +63,36 @@ export async function listTopics(filters: {
   else if (sortBy === "status") orderBy = [{ status: order }, { recommendedPublishDate: "asc" }];
   else if (sortBy === "updated") orderBy = [{ updatedAt: order }];
 
-  return prisma.plannedTopic.findMany({
-    where,
-    orderBy,
-    include: {
-      monthlyPlan: { select: { id: true, year: true, month: true, websiteId: true } },
-      article: { select: { id: true } },
-    },
-  });
+  const include = {
+    monthlyPlan: { select: { id: true, year: true, month: true, websiteId: true } },
+    article: { select: { id: true } },
+  };
+
+  if (calendarMode) {
+    const items = await prisma.plannedTopic.findMany({
+      where,
+      orderBy,
+      include,
+    });
+    return { items, total: items.length, page: 1, limit: items.length };
+  }
+
+  const page = Math.max(1, filters.page ?? 1);
+  const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await prisma.$transaction([
+    prisma.plannedTopic.findMany({
+      where,
+      orderBy,
+      skip,
+      take: limit,
+      include,
+    }),
+    prisma.plannedTopic.count({ where }),
+  ]);
+
+  return { items, total, page, limit };
 }
 
 export async function createManualTopic(input: ManualTopicInput) {
