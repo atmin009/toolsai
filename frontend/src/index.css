@@ -1,0 +1,92 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --color-background: oklch(0.97 0.004 260);
+  --color-surface: oklch(1 0 0);
+  --color-foreground: oklch(0.2 0.02 260);
+  --color-muted: oklch(0.52 0.02 260);
+  --color-card: oklch(1 0 0);
+  --color-border: oklch(0.91 0.01 260);
+  --color-primary: oklch(0.52 0.2 280);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --shadow-soft: 0 1px 3px oklch(0 0 0 / 0.06), 0 10px 24px oklch(0 0 0 / 0.06);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Tiptap */
+.ProseMirror {
+  outline: none;
+  min-height: 320px;
+}
+.ProseMirror p {
+  margin: 0.5rem 0;
+}
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+}
+.ProseMirror h1 {
+  font-size: 1.875rem;
+}
+.ProseMirror h2 {
+  font-size: 1.5rem;
+}
+.ProseMirror h3 {
+  font-size: 1.25rem;
+}
+.ProseMirror h4 {
+  font-size: 1.125rem;
+}
+.ProseMirror h5 {
+  font-size: 1rem;
+}
+.ProseMirror h6 {
+  font-size: 0.9375rem;
+}
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid oklch(0.88 0.01 260);
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+}
+.ProseMirror th {
+  background: oklch(0.96 0.01 260);
+  font-weight: 600;
+}
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+.ProseMirror pre {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: oklch(0.96 0.01 260);
+  font-size: 0.875rem;
+  overflow-x: auto;
+}

@@ -1,0 +1,88 @@
+import type { Request, Response } from "express";
+import { parseBody } from "../lib/validateRequest";
+import { articleUpdateSchema, improveArticleSchema, wordpressPublishSchema } from "../validation/article.schema";
+import { routeParam } from "../utils/routeParam";
+import * as articleService from "../services/article.service";
+import * as wordpressService from "../services/wordpress.service";
+import { parseTopicStatusQuery } from "../services/topic.service";
+
+export async function listArticles(req: Request, res: Response) {
+  const websiteId = req.query.websiteId ? String(req.query.websiteId) : undefined;
+  const q = req.query.q ? String(req.query.q) : undefined;
+  const topicStatus = parseTopicStatusQuery(req.query.status ? String(req.query.status) : undefined);
+  const sortBy = req.query.sortBy
+    ? (String(req.query.sortBy) as "date" | "updated" | "title")
+    : undefined;
+  const order = req.query.order ? (String(req.query.order) as "asc" | "desc") : undefined;
+  const items = await articleService.listArticles({ websiteId, q, topicStatus, sortBy, order });
+  res.json({ items });
+}
+
+export async function generateArticle(req: Request, res: Response) {
+  const topicId = routeParam(req.params.topicId);
+  const article = await articleService.generateArticleForTopic(topicId, req.user!.id);
+  res.status(201).json({ article });
+}
+
+export async function getArticle(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const article = await articleService.getArticleById(id);
+  res.json({ article: articleService.sanitizeArticleForClient(article) });
+}
+
+export async function updateArticle(req: Request, res: Response) {
+  const body = parseBody(articleUpdateSchema, req.body);
+  const id = routeParam(req.params.id);
+  const article = await articleService.updateArticle(id, body);
+  res.json({ article });
+}
+
+export async function publishArticleWordpress(req: Request, res: Response) {
+  const body = parseBody(wordpressPublishSchema, req.body);
+  const id = routeParam(req.params.id);
+  const wp = await wordpressService.publishArticleToWordpress(id, {
+    status: body.status,
+    wpCategoryIds: body.wpCategoryIds,
+    wpTagIds: body.wpTagIds,
+  });
+  const article = await articleService.getArticleById(id);
+  res.json({ article: articleService.sanitizeArticleForClient(article), wordpress: wp.wordpress });
+}
+
+export async function listArticleVersions(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const items = await articleService.listArticleVersions(id);
+  res.json({ items });
+}
+
+export async function improveArticle(req: Request, res: Response) {
+  const body = parseBody(improveArticleSchema, req.body);
+  const id = routeParam(req.params.id);
+  const article = await articleService.improveArticleBody(id, body.instruction, req.user!.id);
+  res.json({ article });
+}
+
+export async function generateSEOFields(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const fields = await articleService.generateArticleSEOFields(id, req.user!.id);
+  res.json({ fields });
+}
+
+export async function exportArticle(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const format = (req.query.format as string) || "html";
+  if (!["html", "markdown", "json"].includes(format)) {
+    res.status(400).json({ error: "format must be html, markdown, or json" });
+    return;
+  }
+  const result = await articleService.exportArticleDocument(id, format as "html" | "markdown" | "json");
+  res.setHeader("Content-Type", result.contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
+  res.send(result.content);
+}
+
+export async function scoreArticle(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const checklist = await articleService.getArticleScoreChecklist(id);
+  res.json(checklist);
+}

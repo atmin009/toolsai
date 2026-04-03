@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TopicStatus {
+  draft_topic
+  approved_topic
+  generating_article
+  article_draft
+  ready_for_publish
+  published_later
+}
+
+enum KeywordGroupType {
+  primary
+  secondary
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  /// Optional global API keys (website-specific keys override when set)
+  /// Optional global API keys (website-specific keys override when set)
+  openaiApiKey  String? @db.Text
+  googleApiKey  String? @db.Text
+  claudeApiKey  String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Website {
+  id               String           @id @default(cuid())
+  name             String
+  domain           String
+  brandName        String
+  niche            String
+  defaultLanguage  String           @default("th")
+  targetAudience   String           @db.Text
+  toneOfVoice      String           @db.Text
+  seoRules         String?          @db.Text
+  /// JSON array of article goal strings, e.g. ["traffic","education"]
+  articleGoals     Json             @default("[]")
+  /// JSON array of phrases/keywords to avoid in generated topics
+  keywordBlacklist Json             @default("[]")
+  forbiddenClaims  String?          @db.Text
+  complianceNotes  String?          @db.Text
+  /// short | standard | long — default length for new articles
+  defaultArticleLength String       @default("standard")
+  /// mock | openai | google — which AI backend to use for this site
+  aiProvider           String       @default("mock")
+  /// e.g. gpt-4o, gemini-1.5-flash — falls back per provider if empty
+  aiModel              String?
+  aiTemperature        Float?
+  aiMaxTokens          Int?
+  /// Optional secondary provider used after retries if the primary fails
+  aiFallbackProvider   String?
+  /// Per-site API keys (override user-level keys from Settings)
+  openaiApiKey String? @db.Text
+  googleApiKey String? @db.Text
+  claudeApiKey String? @db.Text
+  /// WordPress site root, e.g. https://example.com (no trailing path)
+  wpSiteUrl              String? @db.VarChar(2048)
+  wpUsername             String? @db.VarChar(191)
+  /// Application Password (Users → Application Passwords)
+  wpApplicationPassword  String? @db.Text
+  /// draft | publish | pending | private — default for “Publish to WordPress”
+  wpDefaultStatus        String    @default("draft")
+  keywordGroups    KeywordGroup[]
+  categories       ContentCategory[]
+  monthlyPlans     MonthlyPlan[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model KeywordGroup {
+  id        String           @id @default(cuid())
+  websiteId String
+  website   Website          @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  type      KeywordGroupType
+  label     String
+  /// JSON array of keyword strings
+  keywords  Json               @default("[]")
+  createdAt DateTime         @default(now())
+}
+
+model ContentCategory {
+  id          String   @id @default(cuid())
+  websiteId   String
+  website     Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+}
+
+model MonthlyPlan {
+  id            String         @id @default(cuid())
+  websiteId     String
+  website       Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  year          Int
+  month         Int
+  postsPerDay   Int            @default(1)
+  plannedTopics PlannedTopic[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([websiteId, year, month])
+}
+
+model PlannedTopic {
+  id                     String      @id @default(cuid())
+  monthlyPlanId          String
+  monthlyPlan            MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
+  /// LLM / localized titles can exceed default VARCHAR(191)
+  proposedTitle          String      @db.Text
+  primaryKeyword         String      @db.Text
+  /// JSON array of strings
+  secondaryKeywords      Json        @default("[]")
+  searchIntent           String
+  articleType            String
+  brief                  String      @db.Text
+  recommendedPublishDate DateTime
+  status                 TopicStatus @default(draft_topic)
+  sortOrder              Int         @default(0)
+  /// planner | manual
+  source                 String      @default("planner")
+  article                Article?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@index([monthlyPlanId, recommendedPublishDate])
+  @@index([status])
+  @@index([source])
+}
+
+model Article {
+  id                   String           @id @default(cuid())
+  plannedTopicId       String           @unique
+  plannedTopic         PlannedTopic     @relation(fields: [plannedTopicId], references: [id], onDelete: Cascade)
+  language             String           @default("en")
+  /// short | standard | long — overrides website default when set
+  articleLength        String?
+  seoTitle             String?
+  metaTitle            String?
+  metaDescription      String?          @db.Text
+  slug                 String?
+  focusKeyword         String?
+  secondaryKeywords    Json             @default("[]")
+  excerpt              String?          @db.Text
+  h1                   String?
+  outline              Json?
+  body                 String?          @db.LongText
+  faq                  Json?
+  internalLinkIdeas    Json?
+  suggestedCta         String?          @db.Text
+  schemaSuggestion     String?          @db.Text
+  imagePrompt          String?          @db.Text
+  /// Featured / cover image URL (manual — not AI-generated)
+  coverImageUrl        String?          @db.VarChar(2048)
+  tagsSuggestion       Json             @default("[]")
+  categoriesSuggestion Json             @default("[]")
+  wpReadyPayload       Json?
+  /// WordPress post ID once published or updated via REST
+  wpPostId             Int?
+  wpPostUrl            String?          @db.VarChar(2048)
+  wpLastPushedAt       DateTime?
+  /// WordPress category term IDs (REST) to send on publish
+  wpCategoryIds        Json             @default("[]")
+  /// WordPress tag term IDs (REST) to send on publish
+  wpTagIds             Json             @default("[]")
+  currentVersion       Int              @default(1)
+  lastAutoSavedAt      DateTime?
+  versions             ArticleVersion[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+}
+
+model ArticleVersion {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  version   Int
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, version])
+}
