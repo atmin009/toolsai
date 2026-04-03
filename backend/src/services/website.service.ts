@@ -14,26 +14,28 @@ type UpdateInput = z.infer<typeof websiteUpdateSchema>;
 /** Strip secret API keys / WP app password from API responses; expose whether credentials exist. */
 export function sanitizeWebsiteForClient(
   website: Website & { keywordGroups?: unknown[]; categories?: unknown[]; _count?: unknown }
-): Omit<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword"> & {
+): Omit<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword" | "wpPluginApiKey"> & {
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
   hasClaudeApiKey: boolean;
   hasWpCredentials: boolean;
+  hasWpPluginKey: boolean;
 } {
-  const { openaiApiKey, googleApiKey, claudeApiKey, wpApplicationPassword, ...rest } = website;
+  const { openaiApiKey, googleApiKey, claudeApiKey, wpApplicationPassword, wpPluginApiKey, ...rest } = website;
+  const hasWpPluginKey = !!wpPluginApiKey?.trim();
   return {
     ...(rest as Omit<
       Website,
-      "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword"
+      "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword" | "wpPluginApiKey"
     >),
     hasOpenaiApiKey: !!openaiApiKey?.trim(),
     hasGoogleApiKey: !!googleApiKey?.trim(),
     hasClaudeApiKey: !!claudeApiKey?.trim(),
     hasWpCredentials: !!(
-      website.wpSiteUrl?.trim() &&
-      website.wpUsername?.trim() &&
-      wpApplicationPassword?.trim()
+      (website.wpSiteUrl?.trim() && hasWpPluginKey) ||
+      (website.wpSiteUrl?.trim() && website.wpUsername?.trim() && wpApplicationPassword?.trim())
     ),
+    hasWpPluginKey,
   };
 }
 
@@ -94,7 +96,7 @@ export async function updateWebsite(id: string, input: UpdateInput) {
   const existing = await prisma.website.findUnique({ where: { id } });
   if (!existing) throw new AppError(404, "Website not found");
 
-  const { keywordGroups, categories, wpApplicationPassword, ...rest } = input;
+  const { keywordGroups, categories, wpApplicationPassword, wpPluginApiKey, ...rest } = input;
 
   await prisma.$transaction(async (tx) => {
     await tx.website.update({
@@ -108,6 +110,9 @@ export async function updateWebsite(id: string, input: UpdateInput) {
                 ? normalizeWpApplicationPassword(wpApplicationPassword)
                 : null,
             }
+          : {}),
+        ...(wpPluginApiKey !== undefined
+          ? { wpPluginApiKey: wpPluginApiKey?.trim() ? wpPluginApiKey.trim() : null }
           : {}),
       },
     });
@@ -215,6 +220,7 @@ export async function duplicateWebsite(id: string, name?: string) {
       wpSiteUrl: null,
       wpUsername: null,
       wpApplicationPassword: null,
+      wpPluginApiKey: null,
       wpDefaultStatus: "draft",
       keywordGroups: {
         create: w.keywordGroups.map((kg) => ({

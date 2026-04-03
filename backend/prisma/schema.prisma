@@ -70,6 +70,8 @@ model Website {
   wpUsername             String? @db.VarChar(191)
   /// Application Password (Users → Application Passwords)
   wpApplicationPassword  String? @db.Text
+  /// Optional: Zettaword Bridge plugin API key (if set, Bridge is used instead of Application Password)
+  wpPluginApiKey         String? @db.Text
   /// draft | publish | pending | private — default for “Publish to WordPress”
   wpDefaultStatus        String    @default("draft")
   keywordGroups    KeywordGroup[]

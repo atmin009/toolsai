@@ -40,6 +40,7 @@ type WebsitePayload = {
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
   hasWpCredentials: boolean;
+  hasWpPluginKey?: boolean;
   wpSiteUrl: string | null;
   wpUsername: string | null;
   wpDefaultStatus: string;
@@ -83,6 +84,7 @@ export function WebsiteDetailPage() {
     wpSiteUrl: "",
     wpUsername: "",
     wpAppPassword: "",
+    wpPluginApiKey: "",
     wpDefaultStatus: "draft",
   });
 
@@ -134,6 +136,7 @@ export function WebsiteDetailPage() {
       wpSiteUrl: w.wpSiteUrl ?? "",
       wpUsername: w.wpUsername ?? "",
       wpAppPassword: "",
+      wpPluginApiKey: "",
       wpDefaultStatus: w.wpDefaultStatus ?? "draft",
     });
     setEditBasicsOpen(false);
@@ -250,11 +253,12 @@ export function WebsiteDetailPage() {
         wpDefaultStatus: wp.wpDefaultStatus,
       };
       if (appPassNoSpaces) payload.wpApplicationPassword = appPassNoSpaces;
+      if (wp.wpPluginApiKey.trim()) payload.wpPluginApiKey = wp.wpPluginApiKey.trim();
       await api.patch(`/websites/${id}`, payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["website", id] });
-      setWp((p) => ({ ...p, wpAppPassword: "" }));
+      setWp((p) => ({ ...p, wpAppPassword: "", wpPluginApiKey: "" }));
     },
   });
 
@@ -265,13 +269,22 @@ export function WebsiteDetailPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["website", id] }),
   });
 
+  const clearWpPluginKey = useMutation({
+    mutationFn: async () => {
+      await api.patch(`/websites/${id}`, { wpPluginApiKey: null });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["website", id] }),
+  });
+
   const testWp = useMutation({
     mutationFn: async () => {
       const appPass = wp.wpAppPassword.replace(/\s+/g, "");
+      const pluginKey = wp.wpPluginApiKey.trim();
       const { data } = await api.post(`/websites/${id}/wordpress/test`, {
         ...(wp.wpSiteUrl.trim() ? { wpSiteUrl: wp.wpSiteUrl.trim() } : {}),
-        ...(wp.wpUsername.trim() ? { wpUsername: wp.wpUsername.trim() } : {}),
-        ...(appPass ? { wpApplicationPassword: appPass } : {}),
+        ...(pluginKey ? { wpPluginApiKey: pluginKey } : {}),
+        ...(!pluginKey && wp.wpUsername.trim() ? { wpUsername: wp.wpUsername.trim() } : {}),
+        ...(!pluginKey && appPass ? { wpApplicationPassword: appPass } : {}),
       });
       return data as { ok: boolean; message: string };
     },
@@ -673,6 +686,18 @@ export function WebsiteDetailPage() {
               className="font-mono text-sm"
             />
           </div>
+          <div className="space-y-2">
+            <Label>{t("website.wordpress.bridgeKey")}</Label>
+            <Input
+              type="password"
+              autoComplete="off"
+              placeholder={w.hasWpCredentials ? t("website.wordpress.bridgePlaceholder") : ""}
+              value={wp.wpPluginApiKey}
+              onChange={(e) => setWp((p) => ({ ...p, wpPluginApiKey: e.target.value }))}
+              className="font-mono text-sm"
+            />
+            <p className="text-[11px] text-[var(--color-muted)]">{t("website.wordpress.bridgeHint")}</p>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>{t("website.wordpress.username")}</Label>
@@ -719,6 +744,20 @@ export function WebsiteDetailPage() {
             {w.hasWpCredentials && (
               <Button type="button" variant="outline" size="sm" disabled={clearWpPassword.isPending} onClick={() => clearWpPassword.mutate()}>
                 {t("website.wordpress.clearPassword")}
+              </Button>
+            )}
+            {w.hasWpPluginKey && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={clearWpPluginKey.isPending}
+                onClick={() => {
+                  if (!window.confirm(t("website.wordpress.clearBridgeConfirm"))) return;
+                  clearWpPluginKey.mutate();
+                }}
+              >
+                {t("website.wordpress.clearBridge")}
               </Button>
             )}
             {testWp.isSuccess && <span className="text-sm text-emerald-700">{testWp.data.message}</span>}

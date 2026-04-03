@@ -28,8 +28,12 @@ export type ArticleWithSite = Article & {
 /** Hides `wpApplicationPassword` and exposes `hasWpCredentials` on nested website. */
 export function sanitizeArticleForClient(article: ArticleWithSite) {
   const w = article.plannedTopic.monthlyPlan.website;
-  const hasWpCredentials = !!(w.wpSiteUrl?.trim() && w.wpUsername?.trim() && w.wpApplicationPassword?.trim());
-  const { wpApplicationPassword: _omit, ...safeW } = w;
+  const hasWpPluginKey = !!w.wpPluginApiKey?.trim();
+  const hasWpCredentials = !!(
+    (w.wpSiteUrl?.trim() && hasWpPluginKey) ||
+    (w.wpSiteUrl?.trim() && w.wpUsername?.trim() && w.wpApplicationPassword?.trim())
+  );
+  const { wpApplicationPassword: _omit, wpPluginApiKey: _omit2, ...safeW } = w;
   return {
     ...article,
     plannedTopic: {
@@ -39,6 +43,7 @@ export function sanitizeArticleForClient(article: ArticleWithSite) {
         website: {
           ...safeW,
           hasWpCredentials,
+          hasWpPluginKey,
         },
       },
     },

@@ -18,13 +18,12 @@ export function normalizeWpBaseUrl(raw: string): string {
 
 /**
  * WordPress shows application passwords with spaces for readability; those spaces are NOT part of the secret.
- * Users often paste including spaces → invalid password.
  */
 export function normalizeWpApplicationPassword(raw: string): string {
   return raw.replace(/\s+/g, "");
 }
 
-function basicAuthHeader(user: string, pass: string): { Authorization: string } {
+function basicAuthHeaders(user: string, pass: string): Record<string, string> {
   const token = Buffer.from(`${user}:${pass}`, "utf8").toString("base64");
   return { Authorization: `Basic ${token}` };
 }
@@ -38,7 +37,6 @@ function looksLikeHtmlResponse(s: string): boolean {
   return t.startsWith("<!doctype") || t.startsWith("<html") || /^[\s\n]*</.test(t);
 }
 
-/** Never append raw HTML to user-facing errors. */
 function wordPressErrorDetail(body: string): string {
   const t = body.trim();
   if (!t) return "";
@@ -55,7 +53,6 @@ function wordPressErrorDetail(body: string): string {
   return "";
 }
 
-/** WordPress often returns this when Basic auth never reached PHP (nginx strips Authorization). */
 function wordPressNotLoggedInHint(body: string): string {
   const t = body.toLowerCase();
   if (
@@ -68,35 +65,42 @@ function wordPressNotLoggedInHint(body: string): string {
   return "";
 }
 
-/** Coerce Prisma JSON / API values to positive integer IDs. */
 export function coerceWpIdArray(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x): x is number => typeof x === "number" && Number.isInteger(x) && x > 0);
 }
 
-type WpAuth = { root: string; auth: { Authorization: string } };
+export type WpCreds = { mode: "plugin" | "rest"; root: string; headers: Record<string, string> };
 
-async function getWpClient(websiteId: string): Promise<WpAuth> {
+async function getWpCredentials(websiteId: string): Promise<WpCreds> {
   const w = await prisma.website.findUnique({ where: { id: websiteId } });
   if (!w) throw new AppError(404, "Website not found");
   const base = w.wpSiteUrl?.trim();
+  if (!base) throw new AppError(400, "WordPress site URL is required.");
+  const root = normalizeWpBaseUrl(base);
+  const pluginKey = w.wpPluginApiKey?.trim();
+  if (pluginKey) {
+    return { mode: "plugin", root, headers: { "X-Zettaword-Key": pluginKey } };
+  }
   const user = w.wpUsername?.trim();
   const pass = normalizeWpApplicationPassword(w.wpApplicationPassword ?? "");
-  if (!base || !user || !pass) {
-    throw new AppError(400, "Configure WordPress URL, username, and application password first.");
+  if (!user || !pass) {
+    throw new AppError(
+      400,
+      "Configure either Zettaword Bridge API key (plugin) or WordPress username + Application Password."
+    );
   }
-  const root = normalizeWpBaseUrl(base);
-  return { root, auth: basicAuthHeader(user, pass) };
+  return { mode: "rest", root, headers: basicAuthHeaders(user, pass) };
 }
 
 export type WpTestOverrides = {
   wpSiteUrl?: string;
   wpUsername?: string;
   wpApplicationPassword?: string;
+  wpPluginApiKey?: string;
 };
 
-/** Merge DB + optional form overrides (test can use unsaved URL/user/password). */
-async function resolveWpCredentialsForTest(websiteId: string, override?: WpTestOverrides): Promise<WpAuth> {
+async function resolveWpCredentialsForTest(websiteId: string, override?: WpTestOverrides): Promise<WpCreds> {
   const w = await prisma.website.findUnique({ where: { id: websiteId } });
   if (!w) throw new AppError(404, "Website not found");
 
@@ -104,6 +108,19 @@ async function resolveWpCredentialsForTest(websiteId: string, override?: WpTestO
     override?.wpSiteUrl !== undefined && override.wpSiteUrl.trim() !== ""
       ? override.wpSiteUrl.trim()
       : (w.wpSiteUrl?.trim() ?? "");
+
+  const pluginKeyOverride =
+    override?.wpPluginApiKey !== undefined && override.wpPluginApiKey.trim() !== "";
+  const pluginKey = pluginKeyOverride
+    ? override.wpPluginApiKey!.trim()
+    : (w.wpPluginApiKey?.trim() ?? "");
+
+  if (pluginKey) {
+    if (!base) throw new AppError(400, "WordPress site URL is required.");
+    const root = normalizeWpBaseUrl(base);
+    return { mode: "plugin", root, headers: { "X-Zettaword-Key": pluginKey } };
+  }
+
   const user =
     override?.wpUsername !== undefined && override.wpUsername.trim() !== ""
       ? override.wpUsername.trim()
@@ -116,16 +133,19 @@ async function resolveWpCredentialsForTest(websiteId: string, override?: WpTestO
   const pass = normalizeWpApplicationPassword(passRaw);
 
   if (!base || !user || !pass) {
-    throw new AppError(400, "Configure WordPress URL, username, and application password first.");
+    throw new AppError(
+      400,
+      "Configure WordPress URL and either Zettaword Bridge API key or username + Application Password."
+    );
   }
   const root = normalizeWpBaseUrl(base);
-  return { root, auth: basicAuthHeader(user, pass) };
+  return { mode: "rest", root, headers: basicAuthHeaders(user, pass) };
 }
 
-/** e.g. path `/wp/v2/users/me` — some hosts 404 on `/wp-json`; WP then serves REST at `/index.php/wp-json/` or `?rest_route=`. */
+/** REST path after /wp-json (e.g. /wp/v2/users/me or /zettaword/v1/test). */
 async function wpFetch(
   root: string,
-  auth: { Authorization: string },
+  headers: Record<string, string>,
   path: string,
   init?: RequestInit
 ): Promise<Response> {
@@ -133,18 +153,19 @@ async function wpFetch(
   const primary = `${root}/wp-json${p}`;
   const indexPhp = `${root}/index.php/wp-json${p}`;
   const alt = `${root}/?rest_route=${encodeURIComponent(p)}`;
-  let res = await fetch(primary, { ...init, headers: { ...auth, ...init?.headers } });
+  const merged = { ...headers, ...init?.headers } as Record<string, string>;
+  let res = await fetch(primary, { ...init, headers: merged });
   if (res.status === 404) {
-    res = await fetch(indexPhp, { ...init, headers: { ...auth, ...init?.headers } });
+    res = await fetch(indexPhp, { ...init, headers: merged });
   }
   if (res.status === 404) {
-    res = await fetch(alt, { ...init, headers: { ...auth, ...init?.headers } });
+    res = await fetch(alt, { ...init, headers: merged });
   } else if (res.status === 403) {
     const t = await res.clone().text();
     if (looksLikeHtmlResponse(t)) {
-      res = await fetch(indexPhp, { ...init, headers: { ...auth, ...init?.headers } });
+      res = await fetch(indexPhp, { ...init, headers: merged });
       if (res.status === 404) {
-        res = await fetch(alt, { ...init, headers: { ...auth, ...init?.headers } });
+        res = await fetch(alt, { ...init, headers: merged });
       }
     }
   }
@@ -153,7 +174,7 @@ async function wpFetch(
 
 async function wpFetchGet(
   root: string,
-  auth: { Authorization: string },
+  headers: Record<string, string>,
   path: string,
   query: Record<string, string | number | boolean>
 ): Promise<Response> {
@@ -165,18 +186,18 @@ async function wpFetchGet(
   const indexPhp = `${root}/index.php/wp-json${pathWithQuery}`;
   const basePath = path.startsWith("/") ? path : `/${path}`;
   const alt = `${root}/?rest_route=${encodeURIComponent(basePath)}${qStr ? `&${qStr}` : ""}`;
-  let res = await fetch(primary, { headers: { ...auth } });
+  let res = await fetch(primary, { headers: { ...headers } });
   if (res.status === 404) {
-    res = await fetch(indexPhp, { headers: { ...auth } });
+    res = await fetch(indexPhp, { headers: { ...headers } });
   }
   if (res.status === 404) {
-    res = await fetch(alt, { headers: { ...auth } });
+    res = await fetch(alt, { headers: { ...headers } });
   } else if (res.status === 403) {
     const t = await res.clone().text();
     if (looksLikeHtmlResponse(t)) {
-      res = await fetch(indexPhp, { headers: { ...auth } });
+      res = await fetch(indexPhp, { headers: { ...headers } });
       if (res.status === 404) {
-        res = await fetch(alt, { headers: { ...auth } });
+        res = await fetch(alt, { headers: { ...headers } });
       }
     }
   }
@@ -204,10 +225,27 @@ async function fetchImageBuffer(url: string): Promise<{ buf: Buffer; contentType
   return { buf, contentType, ext };
 }
 
-/** Upload remote image to WordPress media library; returns attachment id or null. */
-async function uploadMediaFromUrl(
+async function uploadMediaFromUrlPlugin(
   root: string,
-  auth: { Authorization: string },
+  headers: Record<string, string>,
+  imageUrl: string
+): Promise<number | null> {
+  const res = await wpFetch(root, headers, "/zettaword/v1/media", {
+    method: "POST",
+    headers: {
+      ...headers,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify({ url: imageUrl }),
+  });
+  if (!res.ok) return null;
+  const media = (await res.json()) as { id?: number };
+  return typeof media.id === "number" ? media.id : null;
+}
+
+async function uploadMediaFromUrlRest(
+  root: string,
+  headers: Record<string, string>,
   imageUrl: string
 ): Promise<number | null> {
   const fetched = await fetchImageBuffer(imageUrl);
@@ -215,7 +253,7 @@ async function uploadMediaFromUrl(
   const filename = `zettaword-cover-${Date.now()}.${fetched.ext}`;
   const path = "/wp/v2/media";
   const postHeaders = {
-    ...auth,
+    ...headers,
     "Content-Disposition": `attachment; filename="${filename}"`,
     "Content-Type": fetched.contentType,
   };
@@ -244,23 +282,56 @@ async function uploadMediaFromUrl(
   return typeof media.id === "number" ? media.id : null;
 }
 
+async function uploadMediaFromUrl(
+  creds: WpCreds,
+  imageUrl: string
+): Promise<number | null> {
+  if (creds.mode === "plugin") {
+    return uploadMediaFromUrlPlugin(creds.root, creds.headers, imageUrl);
+  }
+  return uploadMediaFromUrlRest(creds.root, creds.headers, imageUrl);
+}
+
 export async function testWordPressConnection(websiteId: string, override?: WpTestOverrides) {
-  let root: string;
-  let auth: { Authorization: string };
+  let creds: WpCreds;
   try {
-    const c = await resolveWpCredentialsForTest(websiteId, override);
-    root = c.root;
-    auth = c.auth;
+    creds = await resolveWpCredentialsForTest(websiteId, override);
   } catch (e) {
     if (e instanceof AppError) throw e;
     const msg = e instanceof Error ? e.message : String(e);
     throw new AppError(502, `Failed to load WordPress settings: ${msg}`);
   }
 
+  if (creds.mode === "plugin") {
+    let res: Response;
+    try {
+      res = await wpFetch(creds.root, creds.headers, "/zettaword/v1/test", { method: "GET" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new AppError(
+        502,
+        `Network error calling WordPress (${creds.root}). Check URL, firewall, and that the Zettaword Bridge plugin is installed and active. ${msg}`
+      );
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new AppError(
+        401,
+        `Zettaword Bridge rejected the request (${res.status}). Install and activate the Zettaword Bridge plugin on WordPress and paste the API key from Settings → Zettaword Bridge. ${text.slice(0, 200)}`
+      );
+    }
+    const j = (await res.json()) as { name?: string; version?: string };
+    return {
+      ok: true as const,
+      message: `Connected via Zettaword Bridge to ${j.name ?? "WordPress"}${j.version ? ` (plugin ${j.version})` : ""}.`,
+    };
+  }
+
   const usersPath = "/wp/v2/users/me";
+  const { root, headers } = creds;
   let res: Response;
   try {
-    res = await wpFetch(root, auth, usersPath);
+    res = await wpFetch(root, headers, usersPath);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new AppError(
@@ -273,7 +344,7 @@ export async function testWordPressConnection(websiteId: string, override?: WpTe
     let body = await res.text();
     if (looksLikeHtmlResponse(body)) {
       const altUrl = `${root}/?rest_route=${encodeURIComponent(usersPath)}`;
-      const res2 = await fetch(altUrl, { headers: { ...auth } });
+      const res2 = await fetch(altUrl, { headers: { ...headers } });
       if (res2.ok) {
         const me2 = (await res2.json()) as { name?: string; slug?: string };
         return {
@@ -308,18 +379,25 @@ export async function testWordPressConnection(websiteId: string, override?: WpTe
 
 export type WpTermItem = { id: number; name: string; slug: string };
 
-/** List categories or tags from the connected WordPress site (paginated). */
 export async function listWordPressTerms(websiteId: string, taxonomy: "categories" | "tags"): Promise<WpTermItem[]> {
-  const { root, auth } = await getWpClient(websiteId);
+  const creds = await getWpCredentials(websiteId);
   const out: WpTermItem[] = [];
   let page = 1;
   const perPage = 100;
   while (page <= 20) {
-    const res = await wpFetchGet(root, auth, `/wp/v2/${taxonomy}`, {
-      per_page: perPage,
-      page,
-      hide_empty: false,
-    });
+    const res =
+      creds.mode === "plugin"
+        ? await wpFetchGet(creds.root, creds.headers, "/zettaword/v1/terms", {
+            taxonomy,
+            per_page: perPage,
+            page,
+            hide_empty: false,
+          })
+        : await wpFetchGet(creds.root, creds.headers, `/wp/v2/${taxonomy}`, {
+            per_page: perPage,
+            page,
+            hide_empty: false,
+          });
     if (!res.ok) {
       const text = await res.text();
       throw new AppError(502, `WordPress ${taxonomy} list failed (${res.status}): ${text.slice(0, 240)}`);
@@ -348,7 +426,7 @@ export async function publishArticleToWordpress(
   if (!article) throw new AppError(404, "Article not found");
 
   const website = article.plannedTopic.monthlyPlan.website;
-  const { root, auth } = await getWpClient(website.id);
+  const creds = await getWpCredentials(website.id);
 
   const rawStatus = opts?.status ?? website.wpDefaultStatus ?? "draft";
   const status = isWpPostStatus(rawStatus) ? rawStatus : "draft";
@@ -361,7 +439,7 @@ export async function publishArticleToWordpress(
   let featuredMedia: number | undefined;
 
   if (article.coverImageUrl?.trim()) {
-    const mediaId = await uploadMediaFromUrl(root, auth, article.coverImageUrl.trim());
+    const mediaId = await uploadMediaFromUrl(creds, article.coverImageUrl.trim());
     if (mediaId != null) {
       featuredMedia = mediaId;
     } else {
@@ -375,6 +453,58 @@ export async function publishArticleToWordpress(
     opts?.wpCategoryIds !== undefined ? coerceWpIdArray(opts.wpCategoryIds) : coerceWpIdArray(article.wpCategoryIds);
   const tagIds = opts?.wpTagIds !== undefined ? coerceWpIdArray(opts.wpTagIds) : coerceWpIdArray(article.wpTagIds);
 
+  const existingId = article.wpPostId;
+
+  if (creds.mode === "plugin") {
+    const payload: Record<string, unknown> = {
+      title,
+      content,
+      status,
+      excerpt,
+    };
+    if (slug) payload.slug = slug;
+    if (featuredMedia != null) payload.featured_media = featuredMedia;
+    if (categoryIds.length) payload.categories = categoryIds;
+    if (tagIds.length) payload.tags = tagIds;
+    if (existingId) payload.wp_post_id = existingId;
+
+    const res = await wpFetch(creds.root, creds.headers, "/zettaword/v1/posts", {
+      method: "POST",
+      headers: {
+        ...creds.headers,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 404 && existingId) {
+      throw new AppError(
+        404,
+        "This article was linked to a WordPress post that no longer exists. Clear wp post id in DB or restore the post on WordPress."
+      );
+    }
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new AppError(502, `WordPress publish failed (${res.status}): ${text.slice(0, 500)}`);
+    }
+
+    const post = (await res.json()) as { id: number; link: string };
+
+    await prisma.article.update({
+      where: { id: articleId },
+      data: {
+        wpPostId: post.id,
+        wpPostUrl: post.link,
+        wpLastPushedAt: new Date(),
+        ...(opts?.wpCategoryIds !== undefined ? { wpCategoryIds: categoryIds as Prisma.InputJsonValue } : {}),
+        ...(opts?.wpTagIds !== undefined ? { wpTagIds: tagIds as Prisma.InputJsonValue } : {}),
+      },
+    });
+
+    return { wordpress: { id: post.id, link: post.link, status } };
+  }
+
   const payload: Record<string, unknown> = {
     title,
     content,
@@ -386,14 +516,13 @@ export async function publishArticleToWordpress(
   if (categoryIds.length) payload.categories = categoryIds;
   if (tagIds.length) payload.tags = tagIds;
 
-  const existingId = article.wpPostId;
   const postsPath = existingId ? `/wp/v2/posts/${existingId}` : "/wp/v2/posts";
   const method = existingId ? "PUT" : "POST";
 
-  const res = await wpFetch(root, auth, postsPath, {
+  const res = await wpFetch(creds.root, creds.headers, postsPath, {
     method,
     headers: {
-      ...auth,
+      ...creds.headers,
       "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify(payload),

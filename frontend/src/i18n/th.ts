@@ -264,7 +264,8 @@ export const th: Record<string, string> = {
   "articleEditor.wp.emptyTags": "ยังไม่มีแท็กบนไซต์ — สร้างแท็กใน WP ก่อน",
 
   "website.wordpress.title": "WordPress",
-  "website.wordpress.desc": "เชื่อมต่อด้วย Application Password (ผู้ใช้ → Application Passwords) และ REST API",
+  "website.wordpress.desc":
+    "เชื่อมต่อด้วยปลั๊กอิน Zettaword Bridge + API key (แนะนำ) หรือ Application Password + REST API",
   "website.wordpress.hint":
     "ใช้ URL รากของเว็บ เช่น https://blog.example.com — ไม่ใส่ /wp-admin ปลายทางต้องเปิด REST API",
   "website.wordpress.statusLabel": "การเชื่อมต่อ",
@@ -283,4 +284,10 @@ export const th: Record<string, string> = {
   "website.wordpress.test": "ทดสอบการเชื่อมต่อ",
   "website.wordpress.testing": "กำลังทดสอบ…",
   "website.wordpress.clearPassword": "ล้างรหัสแอป",
+  "website.wordpress.bridgeKey": "Zettaword Bridge API key",
+  "website.wordpress.bridgePlaceholder": "••••••••",
+  "website.wordpress.bridgeHint":
+    "ติดตั้งปลั๊กอินจากโฟลเดอร์ wordpress-plugin/zettaword-bridge แล้วไปที่ WordPress → Settings → Zettaword Bridge คัดลอกคีย์มาวาง — ถ้ากรอกคีย์นี้ ระบบจะไม่ใช้ Application Password",
+  "website.wordpress.clearBridge": "ล้าง Bridge key",
+  "website.wordpress.clearBridgeConfirm": "ล้าง Zettaword Bridge API key จากเว็บไซต์นี้?",
 };

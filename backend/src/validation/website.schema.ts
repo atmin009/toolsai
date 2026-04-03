@@ -27,6 +27,8 @@ export const websiteCreateSchema = z.object({
   wpSiteUrl: z.string().max(2048).optional().nullable(),
   wpUsername: z.string().max(191).optional().nullable(),
   wpApplicationPassword: z.string().optional().nullable(),
+  /** Zettaword Bridge plugin API key (if set, used instead of Application Password) */
+  wpPluginApiKey: z.string().optional().nullable(),
   wpDefaultStatus: z.enum(["draft", "publish", "pending", "private"]).optional(),
   articleGoals: z.array(z.enum(["traffic", "conversion", "education", "comparison", "branding"])).default([]),
   keywordGroups: z
@@ -52,4 +54,5 @@ export const wordpressTestSchema = z.object({
   wpSiteUrl: z.string().max(2048).optional(),
   wpUsername: z.string().max(191).optional(),
   wpApplicationPassword: z.string().optional(),
+  wpPluginApiKey: z.string().optional(),
 });
