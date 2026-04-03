@@ -60,32 +60,58 @@ function TBtn({ onClick, active, disabled, title, children }: BtnProps) {
 export function ArticleEditorToolbar({ editor }: { editor: Editor | null }) {
   const snap = useEditorState({
     editor,
-    selector: ({ editor: ed, transactionNumber }) => ({
-      transactionNumber,
-      bold: ed.isActive("bold"),
-      italic: ed.isActive("italic"),
-      underline: ed.isActive("underline"),
-      strike: ed.isActive("strike"),
-      code: ed.isActive("code"),
-      bullet: ed.isActive("bulletList"),
-      ordered: ed.isActive("orderedList"),
-      blockquote: ed.isActive("blockquote"),
-      link: ed.isActive("link"),
-      codeBlock: ed.isActive("codeBlock"),
-      al: ed.isActive({ textAlign: "left" }),
-      ac: ed.isActive({ textAlign: "center" }),
-      ar: ed.isActive({ textAlign: "right" }),
-      aj: ed.isActive({ textAlign: "justify" }),
-      inTable: ed.isActive("table"),
-      canUndo: ed.can().undo(),
-      canRedo: ed.can().redo(),
-      block: (() => {
-        for (let level = 1; level <= 6; level++) {
-          if (ed.isActive("heading", { level })) return `h${level}` as const;
-        }
-        return "paragraph" as const;
-      })(),
-    }),
+    selector: ({ editor: ed, transactionNumber }) => {
+      if (!ed) {
+        return {
+          transactionNumber,
+          bold: false,
+          italic: false,
+          underline: false,
+          strike: false,
+          code: false,
+          bullet: false,
+          ordered: false,
+          blockquote: false,
+          link: false,
+          codeBlock: false,
+          al: false,
+          ac: false,
+          ar: false,
+          aj: false,
+          inTable: false,
+          canUndo: false,
+          canRedo: false,
+          block: "paragraph" as const,
+        };
+      }
+
+      return {
+        transactionNumber,
+        bold: ed.isActive("bold"),
+        italic: ed.isActive("italic"),
+        underline: ed.isActive("underline"),
+        strike: ed.isActive("strike"),
+        code: ed.isActive("code"),
+        bullet: ed.isActive("bulletList"),
+        ordered: ed.isActive("orderedList"),
+        blockquote: ed.isActive("blockquote"),
+        link: ed.isActive("link"),
+        codeBlock: ed.isActive("codeBlock"),
+        al: ed.isActive({ textAlign: "left" }),
+        ac: ed.isActive({ textAlign: "center" }),
+        ar: ed.isActive({ textAlign: "right" }),
+        aj: ed.isActive({ textAlign: "justify" }),
+        inTable: ed.isActive("table"),
+        canUndo: ed.can().undo(),
+        canRedo: ed.can().redo(),
+        block: (() => {
+          for (let level = 1; level <= 6; level++) {
+            if (ed.isActive("heading", { level })) return `h${level}` as const;
+          }
+          return "paragraph" as const;
+        })(),
+      };
+    },
   });
 
   if (!editor || !snap) return null;
