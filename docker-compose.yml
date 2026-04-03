@@ -9,8 +9,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-zettaword-root}
     volumes:
       - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
     healthcheck:
       test:
         [
