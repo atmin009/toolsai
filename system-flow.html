@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zettaword – Simple Flow</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #050816;
+        --bg-panel: #0f172a;
+        --bg-panel-soft: #020617;
+        --border-subtle: #1e293b;
+        --primary: #6366f1;
+        --primary-soft: rgba(99, 102, 241, 0.12);
+        --primary-strong: rgba(129, 140, 248, 0.4);
+        --accent: #22c55e;
+        --text: #e5e7eb;
+        --text-soft: #94a3b8;
+        --muted: #64748b;
+        --danger: #f97373;
+        --shadow-soft: 0 22px 45px rgba(15, 23, 42, 0.9);
+        --radius-lg: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #000 100%);
+        color: var(--text);
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+      }
+
+      .canvas {
+        width: 100%;
+        max-width: 980px;
+        background: #0b1220;
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        box-shadow: var(--shadow-soft);
+        padding: 20px 18px 22px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 20px;
+        letter-spacing: 0.02em;
+        color: #e5e7eb;
+      }
+
+      p.subtitle {
+        margin: 0 0 16px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .flow-wrapper {
+        position: relative;
+        margin-top: 8px;
+        padding: 18px 12px 10px;
+        border-radius: 18px;
+        background: radial-gradient(circle at top, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.98));
+        border: 1px solid rgba(148, 163, 184, 0.5);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .step {
+        min-width: 140px;
+        max-width: 220px;
+        text-align: center;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #0f172a;
+        background: #e5e7eb;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.7);
+      }
+
+      .step--start {
+        border-radius: 999px;
+        background: #bbf7d0;
+      }
+
+      .step--end {
+        border-radius: 999px;
+        background: #bfdbfe;
+      }
+
+      .decision {
+        position: relative;
+        width: 150px;
+        height: 60px;
+        color: #e5e7eb;
+        font-size: 12px;
+      }
+
+      .decision-shape {
+        position: absolute;
+        inset: 0;
+        background: #f9a8d4;
+        transform: rotate(45deg);
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.7);
+      }
+
+      .decision-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px;
+        text-align: center;
+      }
+
+      .arrow {
+        font-size: 16px;
+        color: #e5e7eb;
+      }
+
+      .note {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--text-soft);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="canvas">
+      <h1>Zettaword – Simple User Flow</h1>
+      <p class="subtitle">ภาพรวมแบบย่อของการทำงานตามลำดับขั้น จากผู้ใช้จนถึงการ publish บทความ</p>
+
+      <div class="flow-wrapper">
+        <!-- Row 1 -->
+        <div class="row">
+          <div class="step step--start">Start</div>
+          <span class="arrow">➜</span>
+          <div class="step">เปิดหน้าเว็บ Zettaword</div>
+          <span class="arrow">➜</span>
+          <div class="step">หน้า Login</div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="row">
+          <div class="decision">
+            <div class="decision-shape"></div>
+            <div class="decision-label">มีบัญชีแล้วหรือยัง?</div>
+          </div>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="row">
+          <div class="step">ถ้า "ยังไม่มี" → สมัครสมาชิก (Register)</div>
+          <span class="arrow">⇣</span>
+          <div class="step">Login เข้าระบบ (ได้ JWT)</div>
+        </div>
+
+        <!-- Row 4 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="step">เลือก / สร้าง Website ที่ต้องการทำคอนเทนต์</div>
+        </div>
+
+        <!-- Row 5 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="step">ไปหน้า Planner กำหนดเดือน + จำนวนโพสต์/วัน</div>
+          <span class="arrow">➜</span>
+          <div class="step">ระบบเรียก AI สร้าง Topic Plan รายวัน</div>
+        </div>
+
+        <!-- Row 6 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="decision">
+            <div class="decision-shape"></div>
+            <div class="decision-label">อนุมัติหัวข้อแล้วหรือยัง?</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="step">ถ้า "ไม่โอเค" → ปรับ / ลบ / Regenerate Topic</div>
+          <span class="arrow">⇣</span>
+          <div class="step">ถ้า "โอเค" → Approve Topic</div>
+        </div>
+
+        <!-- Row 7 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="step">จาก Topics Page เลือกหัวข้อ → กด Generate Article</div>
+          <span class="arrow">➜</span>
+          <div class="step">ระบบใช้ AI สร้างร่างบทความ</div>
+        </div>
+
+        <!-- Row 8 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="step">เปิด Article Editor แก้ไขเนื้อหา + SEO</div>
+          <span class="arrow">➜</span>
+          <div class="step">บันทึก &amp; ตรวจ checklist คุณภาพ</div>
+        </div>
+
+        <!-- Row 9 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="decision">
+            <div class="decision-shape"></div>
+            <div class="decision-label">พร้อม Publish หรือยัง?</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="step">ถ้ายัง → กลับมาแก้เพิ่มภายหลัง</div>
+          <span class="arrow">⇣</span>
+          <div class="step">ถ้าพร้อม → เลือกหมวดหมู่/แท็ก + กด Publish to WordPress</div>
+        </div>
+
+        <!-- Row 10 -->
+        <div class="row">
+          <span class="arrow">⇣</span>
+        </div>
+
+        <div class="row">
+          <div class="step step--end">บทความถูกสร้างบน WordPress แล้ว (มีลิงก์ให้เปิดดู)</div>
+        </div>
+
+        <p class="note">Diagram นี้ตั้งใจให้ดู Flow การใช้งานแบบคร่าว ๆ เท่านั้น ไม่ลงรายละเอียดโค้ดหรือ API.</p>
+      </div>
+    </main>
+  </body>
+</html>

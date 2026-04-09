@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth } from "../middleware/auth";
+import { requireCronOrAuth } from "../middleware/cronOrAuth";
 import * as articles from "../controllers/article.controller";
 
 export const articleRouter = Router();
+
+articleRouter.post("/covers/batch", requireCronOrAuth, asyncHandler(articles.generateCoverBatch));
+articleRouter.post("/:id/cover", requireCronOrAuth, asyncHandler(articles.generateArticleCover));
 
 articleRouter.use(requireAuth);
 

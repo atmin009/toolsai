@@ -14,6 +14,7 @@ import { nativeSelectClass } from "@/lib/input-classes";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n/I18nContext";
 import { useMemo } from "react";
+import { AiProgressBar } from "@/components/AiProgressBar";
 
 const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"] as const;
 const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"] as const;
@@ -654,6 +655,7 @@ export function WebsiteDetailPage() {
                   : (testAi.error as Error)?.message ?? t("common.error")}
               </span>
             )}
+            <AiProgressBar active={testAi.isPending} estimatedSeconds={10} message={t("ai.progress.testAi")} />
           </div>
         </CardContent>
       </Card>

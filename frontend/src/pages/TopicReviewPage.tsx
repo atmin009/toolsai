@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { format } from "date-fns";
 import { useI18n } from "@/i18n/I18nContext";
+import { AiProgressBar } from "@/components/AiProgressBar";
 
 function asStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
@@ -163,6 +164,21 @@ export function TopicReviewPage() {
           </Button>
         )}
       </div>
+
+      <AiProgressBar
+        active={regenerate.isPending}
+        estimatedSeconds={20}
+        message={tr("ai.progress.topic.regenerating")}
+      />
+      <AiProgressBar
+        active={generateArticle.isPending}
+        estimatedSeconds={60}
+        steps={[
+          { label: tr("ai.progress.article.thinking"), done: false },
+          { label: tr("ai.progress.article.writing"), done: false },
+          { label: tr("ai.progress.article.seo"), done: false },
+        ]}
+      />
 
       <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
         <CardHeader>

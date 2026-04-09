@@ -48,3 +48,7 @@ export const wordpressPublishSchema = z.object({
   wpCategoryIds: z.array(z.number().int().positive()).optional(),
   wpTagIds: z.array(z.number().int().positive()).optional(),
 });
+
+export const coverBatchSchema = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+});

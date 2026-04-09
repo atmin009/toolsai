@@ -239,8 +239,18 @@ export const th: Record<string, string> = {
   "articleEditor.contentHelp":
     "แถบเครื่องมือแบบคล้าย WordPress — บันทึกอัตโนมัติหลังหยุดพิมพ์สักครู่",
   "articleEditor.coverTitle": "รูปปกบทความ",
-  "articleEditor.coverDesc": "วาง URL รูปปกเอง (อัปโหลดที่โฮสต์แล้วใส่ลิงก์ — ไม่สร้างด้วย AI)",
+  "articleEditor.coverDesc":
+    "สร้างภาพ 1200×630 อัตโนมัติจากหัวข้อ — หรือวาง URL รูปที่โฮสต์แล้ว",
   "articleEditor.coverUrl": "URL รูปภาพ",
+  "articleEditor.generateCover": "สร้างรูปปกอัตโนมัติ",
+  "articleEditor.generatingCover": "กำลังสร้างรูป…",
+  "articleEditor.coverRegenerateConfirm":
+    "มีรูปปกอยู่แล้ว ต้องการสร้างใหม่แทนที่หรือไม่?",
+  "articleEditor.coverGenerateOk": "สร้างรูปปกแล้ว",
+  "articleEditor.coverNoApiKey":
+    "ไม่มี API key สำหรับสร้างภาพ — ไปที่การตั้งค่า ส่วน «คีย์ API (ทั่วทั้งบัญชี)» ตั้งค่า Google API key",
+  "articleEditor.coverImageFailed": "สร้างภาพพื้นหลังไม่สำเร็จ",
+  "articleEditor.coverGenerateFail": "สร้างรูปไม่สำเร็จ",
   "articleEditor.saveCover": "บันทึกรูปปก",
   "articleEditor.clearCover": "ล้างรูปปก",
   "articleEditor.wp.title": "WordPress",
@@ -289,4 +299,16 @@ export const th: Record<string, string> = {
     "ติดตั้งปลั๊กอินจากโฟลเดอร์ wordpress-plugin/zettaword-bridge แล้วไปที่ WordPress → Settings → Zettaword Bridge คัดลอกคีย์มาวาง — ถ้ากรอกคีย์นี้ ระบบจะไม่ใช้ Application Password",
   "website.wordpress.clearBridge": "ล้าง Bridge key",
   "website.wordpress.clearBridgeConfirm": "ล้าง Zettaword Bridge API key จากเว็บไซต์นี้?",
+
+  "ai.progress.generating": "AI กำลังทำงาน…",
+  "ai.progress.cover.prompt": "กำลังสร้าง prompt สำหรับภาพ",
+  "ai.progress.cover.image": "กำลังสร้างภาพพื้นหลัง",
+  "ai.progress.cover.render": "กำลังวาดข้อความและโลโก้",
+  "ai.progress.article.thinking": "AI กำลังคิดเนื้อหา",
+  "ai.progress.article.writing": "กำลังเขียนบทความ",
+  "ai.progress.article.seo": "กำลังปรับ SEO",
+  "ai.progress.plan.analyzing": "กำลังวิเคราะห์ niche",
+  "ai.progress.plan.topics": "กำลังสร้างหัวข้อ",
+  "ai.progress.topic.regenerating": "กำลังสร้างหัวข้อใหม่",
+  "ai.progress.testAi": "กำลังทดสอบ AI provider…",
 };

@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { nativeSelectClass } from "@/lib/input-classes";
 import { PlannerRangePicker } from "@/components/planner/PlannerRangePicker";
 import { PaginationControls } from "@/components/PaginationControls";
+import { AiProgressBar } from "@/components/AiProgressBar";
 import { buildPlannerDayChunks, type PlannerGranularity } from "@/lib/planner-chunks";
 import {
   format,
@@ -314,15 +315,24 @@ export function PlannerPage() {
                   </Button>
                 )}
               </div>
-              {generate.isPending && chunkProgress && (
-                <p className="max-w-xl text-sm font-medium text-violet-700" role="status">
-                  {tr("planner.chunkStatus")
-                    .replace("{from}", String(chunkProgress.from))
-                    .replace("{to}", String(chunkProgress.to))
-                    .replace("{current}", String(chunkProgress.current))
-                    .replace("{total}", String(chunkProgress.total))}
-                </p>
-              )}
+              <AiProgressBar
+                active={generate.isPending}
+                estimatedSeconds={chunkProgress ? chunkProgress.total * 25 : 40}
+                steps={
+                  chunkProgress
+                    ? [
+                        { label: tr("ai.progress.plan.analyzing"), done: true },
+                        {
+                          label: `${tr("ai.progress.plan.topics")} (${chunkProgress.current}/${chunkProgress.total})`,
+                          done: false,
+                        },
+                      ]
+                    : [
+                        { label: tr("ai.progress.plan.analyzing"), done: false },
+                        { label: tr("ai.progress.plan.topics"), done: false },
+                      ]
+                }
+              />
               {generate.isError && (() => {
                 const info = generateErrorInfo(generate.error);
                 return (

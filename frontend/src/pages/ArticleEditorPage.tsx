@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Download, Eye, PencilLine, Send } from "lucide-react";
+import { Download, Eye, ImagePlus, PencilLine, Send } from "lucide-react";
 import { isAxiosError } from "axios";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useI18n } from "@/i18n/I18nContext";
 import { createArticleEditorExtensions } from "@/components/article-editor/article-editor-extensions";
 import { ArticleEditorToolbar } from "@/components/article-editor/ArticleEditorToolbar";
+import { AiProgressBar } from "@/components/AiProgressBar";
 
 function wpIdsFromJson(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [];
@@ -155,6 +156,23 @@ export function ArticleEditorPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["article", id] });
       qc.invalidateQueries({ queryKey: ["article-score", id] });
+    },
+  });
+
+  const generateCover = useMutation({
+    mutationFn: async (force: boolean) => {
+      const { data } = await api.post<{
+        coverImageUrl: string;
+        skipped?: boolean;
+        reason?: string;
+        illustration?: "generated" | "off" | "no_key" | "failed";
+        imageError?: string;
+      }>(`/articles/${id}/cover`, {}, { params: force ? { force: "true" } : {} });
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["article", id] });
+      if (data.coverImageUrl) setCoverUrl(data.coverImageUrl);
     },
   });
 
@@ -365,6 +383,21 @@ export function ArticleEditorPage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={generateCover.isPending || save.isPending}
+                  onClick={() => {
+                    const hasCover = !!coverUrl.trim();
+                    if (hasCover && !window.confirm(tr("articleEditor.coverRegenerateConfirm"))) return;
+                    generateCover.mutate(hasCover);
+                  }}
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  {generateCover.isPending ? tr("articleEditor.generatingCover") : tr("articleEditor.generateCover")}
+                </Button>
+                <Button
+                  type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => save.mutate({ coverImageUrl: coverUrl.trim() || null })}
@@ -385,6 +418,50 @@ export function ArticleEditorPage() {
                   {tr("articleEditor.clearCover")}
                 </Button>
               </div>
+              <AiProgressBar
+                active={generateCover.isPending}
+                estimatedSeconds={45}
+                steps={[
+                  { label: tr("ai.progress.cover.prompt"), done: false },
+                  { label: tr("ai.progress.cover.image"), done: false },
+                  { label: tr("ai.progress.cover.render"), done: false },
+                ]}
+              />
+              {generateCover.isSuccess && generateCover.data?.skipped && generateCover.data.reason ? (
+                <p className="text-xs text-amber-800">{generateCover.data.reason}</p>
+              ) : null}
+              {generateCover.isSuccess &&
+              generateCover.data &&
+              !generateCover.data.skipped &&
+              generateCover.data.illustration === "no_key" ? (
+                <p className="text-xs text-amber-800">{tr("articleEditor.coverNoApiKey")}</p>
+              ) : null}
+              {generateCover.isSuccess &&
+              generateCover.data &&
+              !generateCover.data.skipped &&
+              generateCover.data.illustration === "failed" ? (
+                <p className="text-xs text-red-600">
+                  {tr("articleEditor.coverImageFailed")}
+                  {generateCover.data.imageError ? `: ${generateCover.data.imageError}` : ""}
+                </p>
+              ) : null}
+              {generateCover.isSuccess &&
+              generateCover.data &&
+              !generateCover.data.skipped &&
+              generateCover.data.illustration !== "failed" &&
+              generateCover.data.illustration !== "no_key" ? (
+                <p className="text-xs text-emerald-700">{tr("articleEditor.coverGenerateOk")}</p>
+              ) : null}
+              {generateCover.isError && (
+                <p className="text-xs text-red-600">
+                  {tr("articleEditor.coverGenerateFail")}
+                  {isAxiosError(generateCover.error) && generateCover.error.response?.data
+                    ? `: ${String((generateCover.error.response.data as { error?: string }).error ?? generateCover.error.message)}`
+                    : generateCover.error
+                      ? `: ${(generateCover.error as Error).message}`
+                      : ""}
+                </p>
+              )}
             </CardContent>
           </Card>
 

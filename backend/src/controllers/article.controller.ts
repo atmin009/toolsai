@@ -1,6 +1,12 @@
 import type { Request, Response } from "express";
 import { parseBody } from "../lib/validateRequest";
-import { articleUpdateSchema, improveArticleSchema, wordpressPublishSchema } from "../validation/article.schema";
+import {
+  articleUpdateSchema,
+  coverBatchSchema,
+  improveArticleSchema,
+  wordpressPublishSchema,
+} from "../validation/article.schema";
+import * as coverGeneratorService from "../services/cover-generator.service";
 import { routeParam } from "../utils/routeParam";
 import * as articleService from "../services/article.service";
 import * as wordpressService from "../services/wordpress.service";
@@ -102,4 +108,19 @@ export async function scoreArticle(req: Request, res: Response) {
   const id = routeParam(req.params.id);
   const checklist = await articleService.getArticleScoreChecklist(id);
   res.json(checklist);
+}
+
+/** Batch-generate Open Graph covers for articles missing `coverImageUrl`. */
+export async function generateCoverBatch(req: Request, res: Response) {
+  const body = parseBody(coverBatchSchema, req.body ?? {});
+  const result = await coverGeneratorService.generateMissingCovers({ limit: body.limit, userId: req.user?.id });
+  res.json(result);
+}
+
+/** Generate a 1200×630 cover for one article. Query `force=1` to replace an existing URL. */
+export async function generateArticleCover(req: Request, res: Response) {
+  const id = routeParam(req.params.id);
+  const force = req.query.force === "1" || req.query.force === "true";
+  const result = await coverGeneratorService.generateCoverForArticle(id, force, { userId: req.user?.id });
+  res.json(result);
 }

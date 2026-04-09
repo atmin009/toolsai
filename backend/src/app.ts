@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import cors from "cors";
 import { env } from "./config/env";
@@ -21,6 +22,8 @@ export function createApp() {
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "zettaword-api" });
   });
+
+  app.use("/covers", express.static(path.join(process.cwd(), "public", "covers")));
 
   app.use("/api", apiRouter);
 

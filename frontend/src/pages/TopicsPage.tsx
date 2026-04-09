@@ -15,6 +15,7 @@ import { nativeSelectClass } from "@/lib/input-classes";
 import { format } from "date-fns";
 import { useI18n } from "@/i18n/I18nContext";
 import { PaginationControls } from "@/components/PaginationControls";
+import { AiProgressBar } from "@/components/AiProgressBar";
 
 const PAGE_SIZE = 20;
 
@@ -98,6 +99,16 @@ export function TopicsPage() {
   const bulkDelete = useMutation({
     mutationFn: async (ids: string[]) => {
       await api.post("/topics/bulk-delete", { ids });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["topics"] });
+      setSelected(new Set());
+    },
+  });
+
+  const bulkGenerate = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await api.post("/articles/bulk-generate", { ids });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["topics"] });
@@ -229,13 +240,10 @@ export function TopicsPage() {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => {
-              void api.post("/articles/bulk-generate", { ids });
-              qc.invalidateQueries({ queryKey: ["topics"] });
-              setSelected(new Set());
-            }}
+            onClick={() => bulkGenerate.mutate(ids)}
+            disabled={bulkGenerate.isPending}
           >
-            Generate articles
+            {bulkGenerate.isPending ? t("ai.progress.generating") : "Generate articles"}
           </Button>
           <Button size="sm" variant="destructive" className="gap-1" onClick={() => bulkDelete.mutate(ids)} disabled={bulkDelete.isPending}>
             <Trash2 className="h-3.5 w-3.5" />
@@ -246,6 +254,15 @@ export function TopicsPage() {
           </Button>
         </div>
       )}
+
+      <AiProgressBar
+        active={bulkGenerate.isPending}
+        estimatedSeconds={ids.length * 40}
+        steps={[
+          { label: t("ai.progress.article.thinking"), done: false },
+          { label: t("ai.progress.article.writing"), done: false },
+        ]}
+      />
 
       <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
         <CardHeader>
