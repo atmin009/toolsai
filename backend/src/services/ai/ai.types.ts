@@ -80,8 +80,10 @@ export type PlannerConfig = {
   existingKeywords?: string[];
 };
 
-/** Approved or draft topic ready for full article generation (matches `GeneratedTopic`). */
-export type ApprovedTopic = GeneratedTopic;
+/** Approved or draft topic ready for full article generation. */
+export type ApprovedTopic = GeneratedTopic & {
+  productMentions?: { name: string; url?: string; highlights?: string; price?: string; note?: string }[];
+};
 
 /** Minimal draft for SEO meta regeneration without full article regen. */
 export type ArticleDraft = {

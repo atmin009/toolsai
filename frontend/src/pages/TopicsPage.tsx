@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyPlus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, CopyPlus, Package, Plus, Search, Trash2, X } from "lucide-react";
 import { isAxiosError } from "axios";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,8 @@ export function TopicsPage() {
     brief: "",
     recommendedPublishDate: new Date().toISOString().slice(0, 16),
   });
+  const [manualProducts, setManualProducts] = useState<{ name: string; url: string; highlights: string; price: string; note: string }[]>([]);
+  const [productsOpen, setProductsOpen] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -124,6 +126,7 @@ export function TopicsPage() {
         .map((s) => s.trim())
         .filter(Boolean);
       const iso = new Date(manual.recommendedPublishDate).toISOString();
+      const productMentions = manualProducts.filter((p) => p.name.trim());
       await api.post("/topics/manual", {
         websiteId: manual.websiteId,
         year: manual.year,
@@ -135,11 +138,14 @@ export function TopicsPage() {
         articleType: manual.articleType,
         brief: manual.brief,
         recommendedPublishDate: iso,
+        ...(productMentions.length > 0 ? { productMentions } : {}),
       });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["topics"] });
       setManualOpen(false);
+      setManualProducts([]);
+      setProductsOpen(false);
     },
   });
 
@@ -397,6 +403,70 @@ export function TopicsPage() {
                   onChange={(e) => setManual((m) => ({ ...m, recommendedPublishDate: e.target.value }))}
                 />
               </div>
+
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/60">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+                  onClick={() => setProductsOpen((v) => !v)}
+                >
+                  <Package className="h-4 w-4 text-violet-600" />
+                  {t("product.sectionTitle")}
+                  {manualProducts.length > 0 && (
+                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700">
+                      {manualProducts.length}
+                    </span>
+                  )}
+                  {productsOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
+                </button>
+                {productsOpen && (
+                  <div className="space-y-3 border-t border-zinc-200 p-4">
+                    {manualProducts.map((p, i) => (
+                      <div key={i} className="relative space-y-2 rounded-lg border border-zinc-200 bg-white p-3">
+                        <button
+                          type="button"
+                          onClick={() => setManualProducts((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="absolute right-2 top-2 rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Input
+                            placeholder={t("product.name") + " *"}
+                            value={p.name}
+                            onChange={(e) => setManualProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))}
+                          />
+                          <Input
+                            placeholder={t("product.url")}
+                            value={p.url}
+                            onChange={(e) => setManualProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, url: e.target.value } : x)))}
+                          />
+                          <Input
+                            placeholder={t("product.price")}
+                            value={p.price}
+                            onChange={(e) => setManualProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, price: e.target.value } : x)))}
+                          />
+                          <Input
+                            placeholder={t("product.highlights")}
+                            value={p.highlights}
+                            onChange={(e) => setManualProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, highlights: e.target.value } : x)))}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setManualProducts((prev) => [...prev, { name: "", url: "", highlights: "", price: "", note: "" }])}
+                    >
+                      <Plus className="h-4 w-4" /> {t("product.addProduct")}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="secondary" onClick={() => setManualOpen(false)}>
                   Cancel

@@ -100,10 +100,15 @@ export function buildArticleJsonPrompts(input: GenerateArticleInput): { system: 
 
 Article length target: ${articleLength} (short = fewer sections; long = more depth and subsections).`;
 
+  const productBlock =
+    topic.productMentions && topic.productMentions.length > 0
+      ? `\n\nProduct References (integrate naturally into the article — use product names, link them with <a href> when URL is provided, mention highlights and pricing where relevant):\n${JSON.stringify(topic.productMentions, null, 2)}`
+      : "";
+
   const user = `${websiteContextBlock(website)}
 
 Topic:
-${JSON.stringify(topic, null, 2)}
+${JSON.stringify({ ...topic, productMentions: undefined }, null, 2)}${productBlock}
 
 Write the complete JSON object at the root (not wrapped in "article").`;
 

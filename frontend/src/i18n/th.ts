@@ -319,4 +319,17 @@ export const th: Record<string, string> = {
 
   "dedup.plannerSkipped": "ข้าม {count} หัวข้อที่ keyword ซ้ำกับที่มีอยู่แล้ว",
   "dedup.manualConflict": "keyword หรือชื่อหัวข้อนี้มีอยู่แล้วในเว็บนี้",
+
+  "product.sectionTitle": "สินค้าที่เกี่ยวข้อง",
+  "product.addProduct": "เพิ่มสินค้า",
+  "product.name": "ชื่อสินค้า",
+  "product.url": "ลิงก์สินค้า",
+  "product.highlights": "จุดเด่น / Features",
+  "product.price": "ราคา",
+  "product.note": "หมายเหตุให้ AI",
+  "product.remove": "ลบ",
+  "product.empty": "ยังไม่มีสินค้า — เพิ่มสินค้าเพื่อแทรกในบทความที่ AI สร้าง",
+  "product.hint": "AI จะแทรกข้อมูลสินค้าเหล่านี้เข้าไปในบทความอัตโนมัติ",
+  "product.count": "{count} สินค้า",
+  "product.saved": "บันทึกสินค้าแล้ว",
 };

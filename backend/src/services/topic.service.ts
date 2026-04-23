@@ -129,6 +129,7 @@ export async function createManualTopic(input: ManualTopicInput) {
       searchIntent: input.searchIntent,
       articleType: input.articleType,
       brief: input.brief,
+      productMentions: input.productMentions ?? [],
       recommendedPublishDate: new Date(input.recommendedPublishDate),
       status: TopicStatus.draft_topic,
       sortOrder,

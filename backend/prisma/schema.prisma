@@ -128,6 +128,8 @@ model PlannedTopic {
   searchIntent           String
   articleType            String
   brief                  String      @db.Text
+  /// JSON array: [{ name, url?, highlights?, price?, note? }]
+  productMentions        Json        @default("[]")
   recommendedPublishDate DateTime
   status                 TopicStatus @default(draft_topic)
   sortOrder              Int         @default(0)

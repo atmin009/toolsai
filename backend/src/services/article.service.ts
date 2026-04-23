@@ -94,6 +94,10 @@ export async function generateArticleForTopic(topicId: string, userId?: string |
       lenRaw === "short" || lenRaw === "long" || lenRaw === "standard" ? lenRaw : "standard";
     const language = topic.article?.language ?? loaded.website.defaultLanguage;
 
+    const productMentions = Array.isArray(topic.productMentions)
+      ? (topic.productMentions as { name: string; url?: string; highlights?: string; price?: string; note?: string }[])
+      : [];
+
     const payload = await aiGenerateArticle(
       ai,
       website,
@@ -104,6 +108,7 @@ export async function generateArticleForTopic(topicId: string, userId?: string |
         searchIntent: topic.searchIntent,
         articleType: topic.articleType,
         brief: topic.brief,
+        ...(productMentions.length > 0 ? { productMentions } : {}),
       },
       { language, articleLength }
     );

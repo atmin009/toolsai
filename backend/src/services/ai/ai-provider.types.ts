@@ -19,6 +19,14 @@ export type RegenerateTopicInput = {
   publishDateIso: string;
 };
 
+export interface ProductMention {
+  name: string;
+  url?: string;
+  highlights?: string;
+  price?: string;
+  note?: string;
+}
+
 export type GenerateArticleInput = {
   website: WebsiteContext;
   topic: {
@@ -28,6 +36,7 @@ export type GenerateArticleInput = {
     searchIntent: string;
     articleType: string;
     brief: string;
+    productMentions?: ProductMention[];
   };
   options?: {
     language?: string;

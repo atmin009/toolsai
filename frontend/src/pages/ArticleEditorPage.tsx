@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Download, Eye, ImagePlus, PencilLine, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Eye, ImagePlus, Package, PencilLine, Plus, Send, X } from "lucide-react";
 import { isAxiosError } from "axios";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ export function ArticleEditorPage() {
           plannedTopic: {
             id: string;
             proposedTitle: string;
+            productMentions: { name: string; url?: string; highlights?: string; price?: string; note?: string }[];
             monthlyPlan: {
               websiteId: string;
               website: {
@@ -241,6 +242,29 @@ export function ArticleEditorPage() {
     setLocalWpCatIds(wpIdsFromJson(art.wpCategoryIds));
     setLocalWpTagIds(wpIdsFromJson(art.wpTagIds));
   }, [articleQuery.data?.article, id]);
+
+  type ProductMention = { name: string; url?: string; highlights?: string; price?: string; note?: string };
+  const [products, setProducts] = useState<ProductMention[]>([]);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [productsSaved, setProductsSaved] = useState(false);
+  useEffect(() => {
+    const pm = articleQuery.data?.article?.plannedTopic?.productMentions;
+    setProducts(Array.isArray(pm) ? pm : []);
+    setProductsSaved(false);
+  }, [articleQuery.data?.article?.plannedTopic?.productMentions, id]);
+
+  const saveProducts = useMutation({
+    mutationFn: async () => {
+      const topicId = articleQuery.data?.article?.plannedTopic?.id;
+      if (!topicId) return;
+      const cleaned = products.filter((p) => p.name.trim());
+      await api.patch(`/topics/${topicId}`, { productMentions: cleaned });
+    },
+    onSuccess: () => {
+      setProductsSaved(true);
+      qc.invalidateQueries({ queryKey: ["article", id] });
+    },
+  });
 
   const previewHtml = editor?.getHTML() ?? "";
 
@@ -715,6 +739,94 @@ export function ArticleEditorPage() {
                 {a.tagsSuggestion?.length ? a.tagsSuggestion.join(", ") : "—"}
               </div>
             </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">
+            <CardHeader className="cursor-pointer" onClick={() => setProductsOpen((v) => !v)}>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-violet-600" />
+                <CardTitle className="text-base">{tr("product.sectionTitle")}</CardTitle>
+                {products.length > 0 && (
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700">
+                    {products.length}
+                  </span>
+                )}
+                {productsOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
+              </div>
+              <CardDescription>{tr("product.hint")}</CardDescription>
+            </CardHeader>
+            {productsOpen && (
+              <CardContent className="space-y-3">
+                {products.length === 0 && (
+                  <p className="text-sm text-[var(--color-muted)]">{tr("product.empty")}</p>
+                )}
+                {products.map((p, i) => (
+                  <div key={i} className="relative space-y-2 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
+                    <button
+                      type="button"
+                      onClick={() => setProducts((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute right-2 top-2 rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{tr("product.name")} *</Label>
+                        <Input
+                          value={p.name}
+                          onChange={(e) => setProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{tr("product.url")}</Label>
+                        <Input
+                          value={p.url ?? ""}
+                          onChange={(e) => setProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, url: e.target.value } : x)))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{tr("product.price")}</Label>
+                        <Input
+                          value={p.price ?? ""}
+                          onChange={(e) => setProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, price: e.target.value } : x)))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{tr("product.highlights")}</Label>
+                        <Input
+                          value={p.highlights ?? ""}
+                          onChange={(e) => setProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, highlights: e.target.value } : x)))}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{tr("product.note")}</Label>
+                      <Input
+                        value={p.note ?? ""}
+                        onChange={(e) => setProducts((prev) => prev.map((x, idx) => (idx === i ? { ...x, note: e.target.value } : x)))}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setProducts((prev) => [...prev, { name: "", url: "", highlights: "", price: "", note: "" }])}
+                  >
+                    <Plus className="h-4 w-4" /> {tr("product.addProduct")}
+                  </Button>
+                  {products.length > 0 && (
+                    <Button type="button" size="sm" onClick={() => saveProducts.mutate()} disabled={saveProducts.isPending}>
+                      {saveProducts.isPending ? tr("common.saving") : tr("common.save")}
+                    </Button>
+                  )}
+                  {productsSaved && <span className="text-sm text-emerald-700">{tr("product.saved")}</span>}
+                </div>
+              </CardContent>
+            )}
           </Card>
 
           <Card className="border-0 shadow-[var(--shadow-soft)] ring-1 ring-zinc-200/80">

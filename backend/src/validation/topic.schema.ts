@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const productMentionSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().optional(),
+  highlights: z.string().optional(),
+  price: z.string().optional(),
+  note: z.string().optional(),
+});
+
 export const topicUpdateSchema = z.object({
   proposedTitle: z.string().min(1).optional(),
   primaryKeyword: z.string().min(1).optional(),
@@ -8,6 +16,7 @@ export const topicUpdateSchema = z.object({
   articleType: z.string().min(1).optional(),
   brief: z.string().min(1).optional(),
   recommendedPublishDate: z.string().datetime().optional(),
+  productMentions: z.array(productMentionSchema).optional(),
   status: z
     .enum([
       "draft_topic",
@@ -34,5 +43,6 @@ export const manualTopicCreateSchema = z.object({
   searchIntent: z.string().min(1),
   articleType: z.string().min(1),
   brief: z.string().min(1),
+  productMentions: z.array(productMentionSchema).default([]),
   recommendedPublishDate: z.string().datetime(),
 });
