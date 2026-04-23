@@ -4,6 +4,7 @@ import { AppError } from "../errors/AppError";
 import { asStringArray } from "../lib/jsonArrays";
 import { getAIServiceForWebsite, regenerateTopic as aiRegenerateTopic } from "./ai";
 import { loadWebsiteContext, toAIWebsiteContext } from "./website-context";
+import { findDuplicates } from "./topic-dedup";
 import type { z } from "zod";
 import { manualTopicCreateSchema, topicUpdateSchema } from "../validation/topic.schema";
 
@@ -96,6 +97,17 @@ export async function listTopics(filters: {
 }
 
 export async function createManualTopic(input: ManualTopicInput) {
+  const [dupResult] = await findDuplicates(input.websiteId, [
+    { proposedTitle: input.proposedTitle, primaryKeyword: input.primaryKeyword },
+  ]);
+  if (dupResult.isDuplicate) {
+    const field = dupResult.field === "keyword" ? "primaryKeyword" : "proposedTitle";
+    throw new AppError(
+      409,
+      `Duplicate ${field}: "${dupResult.field === "keyword" ? input.primaryKeyword : input.proposedTitle}" already exists — "${dupResult.existingTitle}"`
+    );
+  }
+
   const plan = await prisma.monthlyPlan.upsert({
     where: {
       websiteId_year_month: { websiteId: input.websiteId, year: input.year, month: input.month },

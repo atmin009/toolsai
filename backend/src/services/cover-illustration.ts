@@ -12,7 +12,7 @@ const COVER_H = 630;
 /** Gemini model for image generation (Nano Banana 2). */
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
 
-type KeysUser = Pick<User, "openaiApiKey" | "googleApiKey" | "claudeApiKey"> | null;
+type KeysUser = Pick<User, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "deepseekApiKey"> | null;
 
 /* ------------------------------------------------------------------ */
 /*  Prompt building                                                   */

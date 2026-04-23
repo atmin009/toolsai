@@ -2,7 +2,7 @@ import type { Website } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../errors/AppError";
-import { resolveClaudeApiKey, resolveGoogleApiKey, resolveOpenAiApiKey } from "./ai/ai-key-resolve";
+import { resolveClaudeApiKey, resolveDeepseekApiKey, resolveGoogleApiKey, resolveOpenAiApiKey } from "./ai/ai-key-resolve";
 import { normalizeWpApplicationPassword } from "./wordpress.service";
 import { pingProvider } from "./ai/ai-connection-test";
 import type { z } from "zod";
@@ -14,23 +14,25 @@ type UpdateInput = z.infer<typeof websiteUpdateSchema>;
 /** Strip secret API keys / WP app password from API responses; expose whether credentials exist. */
 export function sanitizeWebsiteForClient(
   website: Website & { keywordGroups?: unknown[]; categories?: unknown[]; _count?: unknown }
-): Omit<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword" | "wpPluginApiKey"> & {
+): Omit<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "deepseekApiKey" | "wpApplicationPassword" | "wpPluginApiKey"> & {
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
   hasClaudeApiKey: boolean;
+  hasDeepseekApiKey: boolean;
   hasWpCredentials: boolean;
   hasWpPluginKey: boolean;
 } {
-  const { openaiApiKey, googleApiKey, claudeApiKey, wpApplicationPassword, wpPluginApiKey, ...rest } = website;
+  const { openaiApiKey, googleApiKey, claudeApiKey, deepseekApiKey, wpApplicationPassword, wpPluginApiKey, ...rest } = website;
   const hasWpPluginKey = !!wpPluginApiKey?.trim();
   return {
     ...(rest as Omit<
       Website,
-      "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "wpApplicationPassword" | "wpPluginApiKey"
+      "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "deepseekApiKey" | "wpApplicationPassword" | "wpPluginApiKey"
     >),
     hasOpenaiApiKey: !!openaiApiKey?.trim(),
     hasGoogleApiKey: !!googleApiKey?.trim(),
     hasClaudeApiKey: !!claudeApiKey?.trim(),
+    hasDeepseekApiKey: !!deepseekApiKey?.trim(),
     hasWpCredentials: !!(
       (website.wpSiteUrl?.trim() && hasWpPluginKey) ||
       (website.wpSiteUrl?.trim() && website.wpUsername?.trim() && wpApplicationPassword?.trim())
@@ -155,16 +157,16 @@ export async function testWebsiteAIConnection(id: string, userId?: string | null
   if (p === "mock") {
     return { ok: true as const, message: "Mock provider — no network call." };
   }
-  if (p !== "openai" && p !== "google" && p !== "claude") {
+  if (p !== "openai" && p !== "google" && p !== "claude" && p !== "deepseek") {
     throw new AppError(400, "Invalid AI provider");
   }
   let userKeys:
-    | { openaiApiKey: string | null; googleApiKey: string | null; claudeApiKey: string | null }
+    | { openaiApiKey: string | null; googleApiKey: string | null; claudeApiKey: string | null; deepseekApiKey: string | null }
     | null = null;
   if (userId) {
     userKeys = await prisma.user.findUnique({
       where: { id: userId },
-      select: { openaiApiKey: true, googleApiKey: true, claudeApiKey: true },
+      select: { openaiApiKey: true, googleApiKey: true, claudeApiKey: true, deepseekApiKey: true },
     });
   }
   const resolved =
@@ -172,7 +174,9 @@ export async function testWebsiteAIConnection(id: string, userId?: string | null
       ? resolveOpenAiApiKey(w, userKeys)
       : p === "google"
         ? resolveGoogleApiKey(w, userKeys)
-        : resolveClaudeApiKey(w, userKeys);
+        : p === "deepseek"
+          ? resolveDeepseekApiKey(w, userKeys)
+          : resolveClaudeApiKey(w, userKeys);
   try {
     await pingProvider(p, w.aiModel, resolved);
   } catch (e) {

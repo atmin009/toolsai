@@ -102,6 +102,7 @@ export const th: Record<string, string> = {
   "settings.openaiKey": "OpenAI API key",
   "settings.googleKey": "Google AI (Gemini) API key",
   "settings.claudeKey": "Claude (Anthropic) API key",
+  "settings.deepseekKey": "DeepSeek API key",
   "settings.keyPlaceholder": "วางคีย์ใหม่เพื่ออัปเดต",
   "settings.hasKey": "บันทึกแล้ว",
   "settings.noKey": "ยังไม่ได้ตั้ง",
@@ -136,6 +137,7 @@ export const th: Record<string, string> = {
   "website.siteApiKeys": "คีย์ API ของเว็บไซต์นี้ (override)",
   "website.siteOpenaiKey": "OpenAI — คีย์ของเว็บนี้",
   "website.siteGoogleKey": "Google AI — คีย์ของเว็บนี้",
+  "website.siteDeepseekKey": "DeepSeek — คีย์ของเว็บนี้",
   "website.clearKeyHint": "เว้นว่างและบันทึกเพื่อใช้คีย์จากการตั้งค่าหรือเซิร์ฟเวอร์",
 
   "website.compliance": "การปฏิบัติตามกฎและการวางแผน",
@@ -157,14 +159,17 @@ export const th: Record<string, string> = {
   "website.modelHintShort": "เลือกจากรายการหรือพิมพ์รหัสโมเดลที่ API รองรับ",
   "website.placeholderOpenai": "ค่าเริ่มต้น: gpt-4o-mini",
   "website.placeholderGemini": "ค่าเริ่มต้น: gemini-1.5-flash",
+  "website.placeholderDeepseek": "ค่าเริ่มต้น: deepseek-chat",
 
   "settings.clearOpenai": "ล้างคีย์ OpenAI",
   "settings.clearGoogle": "ล้างคีย์ Google",
   "settings.clearClaude": "ล้างคีย์ Claude",
+  "settings.clearDeepseek": "ล้างคีย์ DeepSeek",
 
   "website.ai.mock": "Mock (แพลนเนอร์ภายใน)",
   "website.ai.openai": "OpenAI (GPT)",
   "website.ai.google": "Google AI (Gemini)",
+  "website.ai.deepseek": "DeepSeek",
   "website.fallback.none": "ไม่มี",
 
   "websites.desc": "แต่ละเว็บมีน้ำเสียง กลุ่มคีย์เวิร์ด และหมวดหมู่สำหรับการวางแผนด้วย AI",
@@ -311,4 +316,7 @@ export const th: Record<string, string> = {
   "ai.progress.plan.topics": "กำลังสร้างหัวข้อ",
   "ai.progress.topic.regenerating": "กำลังสร้างหัวข้อใหม่",
   "ai.progress.testAi": "กำลังทดสอบ AI provider…",
+
+  "dedup.plannerSkipped": "ข้าม {count} หัวข้อที่ keyword ซ้ำกับที่มีอยู่แล้ว",
+  "dedup.manualConflict": "keyword หรือชื่อหัวข้อนี้มีอยู่แล้วในเว็บนี้",
 };

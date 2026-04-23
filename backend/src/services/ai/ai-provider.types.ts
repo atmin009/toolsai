@@ -9,6 +9,8 @@ export type GenerateTopicsInput = {
   /** Inclusive; when set with toDay, prompts and merge use only this slice (same global slot order). */
   fromDay?: number;
   toDay?: number;
+  /** Existing primary keywords in this website — AI should avoid generating duplicates. */
+  existingKeywords?: string[];
 };
 
 export type RegenerateTopicInput = {
@@ -60,7 +62,7 @@ export interface AIProvider {
   improveArticle(input: ImproveArticleInput): Promise<{ bodyHtml: string }>;
 }
 
-export type AIProviderId = "openai" | "google" | "claude";
+export type AIProviderId = "openai" | "google" | "claude" | "deepseek";
 
 export type ProviderRuntimeConfig = {
   model: string;

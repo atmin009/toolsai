@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../errors/AppError";
 import { generateTopics, getAIServiceForWebsite, type GeneratedTopic } from "./ai";
 import { loadWebsiteContext, toAIWebsiteContext } from "./website-context";
+import { filterDuplicateTopics, loadExistingKeywords } from "./topic-dedup";
 import type { z } from "zod";
 import { plannerGenerateSchema } from "../validation/planner.schema";
 
@@ -17,10 +18,14 @@ export async function generateMonthlyPlan(input: GenerateInput, userId?: string 
   const daysInMonth = new Date(year, month, 0).getDate();
   const totalSlots = daysInMonth * postsPerDay;
 
+  const existingKwSet = await loadExistingKeywords(websiteId);
+  const existingKeywords = [...existingKwSet];
+
   const plannerConfig = {
     year,
     month,
     postsPerDay,
+    existingKeywords,
     ...(chunk ? { fromDay: chunk.fromDay, toDay: chunk.toDay } : {}),
   };
 
@@ -39,14 +44,21 @@ export async function generateMonthlyPlan(input: GenerateInput, userId?: string 
       update: { postsPerDay },
     });
 
+    // Full-month: delete all topics in this plan first, then dedup against OTHER plans only
     if (!chunk) {
       await tx.plannedTopic.deleteMany({ where: { monthlyPlanId: plan.id } });
+
+      const { unique: dedupedTopics, skippedCount } = await filterDuplicateTopics(
+        websiteId, topics, plan.id
+      );
+
       const created: Awaited<ReturnType<typeof tx.plannedTopic.create>>[] = [];
       let sortOrder = 0;
+      let ti = 0;
       for (let d = 1; d <= daysInMonth; d++) {
         for (let p = 0; p < postsPerDay; p++) {
-          const idx = (d - 1) * postsPerDay + p;
-          const t = topics[idx];
+          const t = dedupedTopics[ti];
+          ti += 1;
           if (!t) break;
           sortOrder += 1;
           const row = await persistOneTopic(tx, plan.id, t, year, month, d, sortOrder);
@@ -56,6 +68,7 @@ export async function generateMonthlyPlan(input: GenerateInput, userId?: string 
       return {
         plan,
         topics: created,
+        skippedDuplicates: skippedCount,
         progress: { mode: "full" as const, totalSlots, createdCount: created.length },
       };
     }
@@ -73,11 +86,17 @@ export async function generateMonthlyPlan(input: GenerateInput, userId?: string 
       });
     }
 
+    // Chunk: exclude this plan from dedup only if resetMonth cleared it
+    const excludePlan = chunk.resetMonth ? plan.id : undefined;
+    const { unique: dedupedTopics, skippedCount } = await filterDuplicateTopics(
+      websiteId, topics, excludePlan
+    );
+
     const created: Awaited<ReturnType<typeof tx.plannedTopic.create>>[] = [];
     let ti = 0;
     for (let d = chunk.fromDay; d <= chunk.toDay; d++) {
       for (let p = 0; p < postsPerDay; p++) {
-        const t = topics[ti];
+        const t = dedupedTopics[ti];
         ti += 1;
         if (!t) break;
         const sortOrder = (d - 1) * postsPerDay + p + 1;
@@ -89,6 +108,7 @@ export async function generateMonthlyPlan(input: GenerateInput, userId?: string 
     return {
       plan,
       topics: created,
+      skippedDuplicates: skippedCount,
       progress: {
         mode: "chunk" as const,
         fromDay: chunk.fromDay,

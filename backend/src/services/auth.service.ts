@@ -10,13 +10,14 @@ type RegisterInput = z.infer<typeof registerSchema>;
 type LoginInput = z.infer<typeof loginSchema>;
 
 export function sanitizeUserForClient(
-  user: Pick<User, "id" | "email" | "name" | "openaiApiKey" | "googleApiKey">
+  user: Pick<User, "id" | "email" | "name" | "openaiApiKey" | "googleApiKey" | "deepseekApiKey">
 ) {
-  const { openaiApiKey, googleApiKey, ...rest } = user;
+  const { openaiApiKey, googleApiKey, deepseekApiKey, ...rest } = user;
   return {
     ...rest,
     hasOpenaiApiKey: !!openaiApiKey?.trim(),
     hasGoogleApiKey: !!googleApiKey?.trim(),
+    hasDeepseekApiKey: !!deepseekApiKey?.trim(),
   };
 }
 

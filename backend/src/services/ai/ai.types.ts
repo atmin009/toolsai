@@ -76,6 +76,8 @@ export type PlannerConfig = {
   /** Inclusive day-of-month slice (1–31). When both set, only that range is generated (chunked planner). */
   fromDay?: number;
   toDay?: number;
+  /** Existing primary keywords in this website — AI should avoid generating duplicates. */
+  existingKeywords?: string[];
 };
 
 /** Approved or draft topic ready for full article generation (matches `GeneratedTopic`). */
@@ -98,6 +100,7 @@ export interface AIService {
     postsPerDay: number;
     fromDay?: number;
     toDay?: number;
+    existingKeywords?: string[];
   }): Promise<GeneratedTopic[]>;
 
   regenerateTopic(input: {

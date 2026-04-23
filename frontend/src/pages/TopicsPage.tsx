@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyPlus, Search, Trash2 } from "lucide-react";
+import { isAxiosError } from "axios";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -408,6 +409,15 @@ export function TopicsPage() {
                   {createManual.isPending ? "Creating…" : "Create topic"}
                 </Button>
               </div>
+              {createManual.isError && (
+                <p className="text-sm text-red-600">
+                  {isAxiosError(createManual.error) && createManual.error.response?.status === 409
+                    ? t("dedup.manualConflict")
+                    : isAxiosError(createManual.error) && createManual.error.response?.data
+                      ? String((createManual.error.response.data as { error?: string }).error ?? createManual.error.message)
+                      : (createManual.error as Error)?.message ?? "Error"}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

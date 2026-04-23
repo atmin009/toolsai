@@ -1,7 +1,7 @@
 import type { User, Website } from "@prisma/client";
 
-type UserKeys = Pick<User, "openaiApiKey" | "googleApiKey" | "claudeApiKey"> | null;
-type WebsiteKeys = Pick<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey">;
+type UserKeys = Pick<User, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "deepseekApiKey"> | null;
+type WebsiteKeys = Pick<Website, "openaiApiKey" | "googleApiKey" | "claudeApiKey" | "deepseekApiKey">;
 
 /** Website key → user key → process env */
 export function resolveOpenAiApiKey(w: WebsiteKeys, user: UserKeys): string | undefined {
@@ -31,5 +31,10 @@ export function resolveGoogleApiKeyAccountWide(user: UserKeys): string | undefin
 
 export function resolveClaudeApiKey(w: WebsiteKeys, user: UserKeys): string | undefined {
   const a = w.claudeApiKey?.trim() || user?.claudeApiKey?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+  return a || undefined;
+}
+
+export function resolveDeepseekApiKey(w: WebsiteKeys, user: UserKeys): string | undefined {
+  const a = w.deepseekApiKey?.trim() || user?.deepseekApiKey?.trim() || process.env.DEEPSEEK_API_KEY?.trim();
   return a || undefined;
 }

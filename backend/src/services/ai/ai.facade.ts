@@ -24,6 +24,7 @@ export async function generateTopics(
     postsPerDay: plannerConfig.postsPerDay,
     fromDay: plannerConfig.fromDay,
     toDay: plannerConfig.toDay,
+    existingKeywords: plannerConfig.existingKeywords,
   });
 }
 

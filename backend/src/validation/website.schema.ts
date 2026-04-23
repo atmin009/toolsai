@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const articleLengthEnum = z.enum(["short", "standard", "long"]);
-const aiProviderEnum = z.enum(["mock", "openai", "google", "claude"]);
+const aiProviderEnum = z.enum(["mock", "openai", "google", "claude", "deepseek"]);
 
 export const websiteCreateSchema = z.object({
   name: z.string().min(1),
@@ -20,10 +20,11 @@ export const websiteCreateSchema = z.object({
   aiModel: z.string().optional().nullable(),
   aiTemperature: z.number().min(0).max(2).optional().nullable(),
   aiMaxTokens: z.number().int().positive().max(128_000).optional().nullable(),
-  aiFallbackProvider: z.enum(["openai", "google", "claude"]).optional().nullable(),
+  aiFallbackProvider: z.enum(["openai", "google", "claude", "deepseek"]).optional().nullable(),
   openaiApiKey: z.string().optional().nullable(),
   googleApiKey: z.string().optional().nullable(),
   claudeApiKey: z.string().optional().nullable(),
+  deepseekApiKey: z.string().optional().nullable(),
   wpSiteUrl: z.string().max(2048).optional().nullable(),
   wpUsername: z.string().max(191).optional().nullable(),
   wpApplicationPassword: z.string().optional().nullable(),

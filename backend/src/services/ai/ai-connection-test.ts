@@ -1,10 +1,10 @@
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENAI_MODEL } from "./providers/provider-factory";
+import { DEFAULT_DEEPSEEK_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OPENAI_MODEL } from "./providers/provider-factory";
 
 export async function pingProvider(
-  provider: "openai" | "google" | "claude",
+  provider: "openai" | "google" | "claude" | "deepseek",
   model?: string | null,
   resolvedApiKey?: string | null
 ): Promise<{ ok: true }> {
@@ -28,6 +28,19 @@ export async function pingProvider(
     const m = model?.trim() || DEFAULT_GEMINI_MODEL;
     const modelRef = genAI.getGenerativeModel({ model: m });
     await modelRef.generateContent("Reply with exactly: ok");
+    return { ok: true };
+  }
+
+  if (provider === "deepseek") {
+    const key = resolvedApiKey?.trim() || process.env.DEEPSEEK_API_KEY?.trim();
+    if (!key) throw new Error("DeepSeek API key not configured");
+    const o = new OpenAI({ apiKey: key, baseURL: "https://api.deepseek.com" });
+    const m = model?.trim() || DEFAULT_DEEPSEEK_MODEL;
+    await o.chat.completions.create({
+      model: m,
+      messages: [{ role: "user", content: "Reply with exactly: ok" }],
+      max_tokens: 8,
+    });
     return { ok: true };
   }
 

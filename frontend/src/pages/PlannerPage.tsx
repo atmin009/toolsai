@@ -59,6 +59,7 @@ export function PlannerPage() {
     from: number;
     to: number;
   } | null>(null);
+  const [lastSkippedDuplicates, setLastSkippedDuplicates] = useState(0);
 
   const planQuery = useQuery({
     queryKey: ["planner", websiteId, year, month],
@@ -112,6 +113,8 @@ export function PlannerPage() {
       const ac = new AbortController();
       generateAbortRef.current = ac;
       noChunkSingleRequestRef.current = false;
+      setLastSkippedDuplicates(0);
+      let totalSkipped = 0;
 
       const range = effectiveRange;
       if (!range) throw new Error("Invalid range");
@@ -130,7 +133,9 @@ export function PlannerPage() {
             { signal: ac.signal, timeout: PLANNER_FULL_MONTH_TIMEOUT_MS }
           );
           last = data;
+          totalSkipped += (data as { skippedDuplicates?: number }).skippedDuplicates ?? 0;
           await qc.invalidateQueries({ queryKey: ["planner", websiteId, year, month] });
+          setLastSkippedDuplicates(totalSkipped);
           return last;
         }
 
@@ -153,8 +158,10 @@ export function PlannerPage() {
             { signal: ac.signal, timeout: PLANNER_CHUNK_TIMEOUT_MS }
           );
           last = data;
+          totalSkipped += (data as { skippedDuplicates?: number }).skippedDuplicates ?? 0;
           await qc.invalidateQueries({ queryKey: ["planner", websiteId, year, month] });
         }
+        setLastSkippedDuplicates(totalSkipped);
         return last;
       } finally {
         setChunkProgress(null);
@@ -348,6 +355,11 @@ export function PlannerPage() {
                   </p>
                 );
               })()}
+              {!generate.isPending && lastSkippedDuplicates > 0 && (
+                <p className="max-w-xl text-sm text-amber-700" role="status">
+                  {tr("dedup.plannerSkipped").replace("{count}", String(lastSkippedDuplicates))}
+                </p>
+              )}
               {websiteId && (
                 <p className="max-w-xl text-xs text-[var(--color-muted)]">{tr("planner.generateSlowHint")}</p>
               )}

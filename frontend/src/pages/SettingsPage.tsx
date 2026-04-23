@@ -15,6 +15,7 @@ type SettingsResponse = {
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
   hasClaudeApiKey: boolean;
+  hasDeepseekApiKey: boolean;
 };
 
 export function SettingsPage() {
@@ -23,6 +24,7 @@ export function SettingsPage() {
   const [openaiKey, setOpenaiKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
   const [claudeKey, setClaudeKey] = useState("");
+  const [deepseekKey, setDeepseekKey] = useState("");
 
   const q = useQuery({
     queryKey: ["settings"],
@@ -36,14 +38,16 @@ export function SettingsPage() {
     setOpenaiKey("");
     setGoogleKey("");
     setClaudeKey("");
-  }, [q.data?.hasOpenaiApiKey, q.data?.hasGoogleApiKey, q.data?.hasClaudeApiKey]);
+    setDeepseekKey("");
+  }, [q.data?.hasOpenaiApiKey, q.data?.hasGoogleApiKey, q.data?.hasClaudeApiKey, q.data?.hasDeepseekApiKey]);
 
   const saveKeys = useMutation({
     mutationFn: async () => {
-      const payload: { openaiApiKey?: string | null; googleApiKey?: string | null; claudeApiKey?: string | null } = {};
+      const payload: Record<string, string | null> = {};
       if (openaiKey.trim()) payload.openaiApiKey = openaiKey.trim();
       if (googleKey.trim()) payload.googleApiKey = googleKey.trim();
       if (claudeKey.trim()) payload.claudeApiKey = claudeKey.trim();
+      if (deepseekKey.trim()) payload.deepseekApiKey = deepseekKey.trim();
       await api.patch("/settings", payload);
     },
     onSuccess: () => {
@@ -51,6 +55,7 @@ export function SettingsPage() {
       setOpenaiKey("");
       setGoogleKey("");
       setClaudeKey("");
+      setDeepseekKey("");
     },
   });
 
@@ -71,6 +76,13 @@ export function SettingsPage() {
   const clearClaude = useMutation({
     mutationFn: async () => {
       await api.patch("/settings", { claudeApiKey: null });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings"] }),
+  });
+
+  const clearDeepseek = useMutation({
+    mutationFn: async () => {
+      await api.patch("/settings", { deepseekApiKey: null });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["settings"] }),
   });
@@ -127,6 +139,9 @@ export function SettingsPage() {
             <span>
               Claude: {q.data?.hasClaudeApiKey ? <Badge>{t("settings.hasKey")}</Badge> : <span className="text-[var(--color-muted)]">{t("settings.noKey")}</span>}
             </span>
+            <span>
+              DeepSeek: {q.data?.hasDeepseekApiKey ? <Badge>{t("settings.hasKey")}</Badge> : <span className="text-[var(--color-muted)]">{t("settings.noKey")}</span>}
+            </span>
           </div>
           <div className="space-y-2">
             <Label htmlFor="openai-key">{t("settings.openaiKey")}</Label>
@@ -182,10 +197,32 @@ export function SettingsPage() {
               </Button>
             )}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="deepseek-key">{t("settings.deepseekKey")}</Label>
+            <Input
+              id="deepseek-key"
+              type="password"
+              autoComplete="off"
+              placeholder={t("settings.keyPlaceholder")}
+              value={deepseekKey}
+              onChange={(e) => setDeepseekKey(e.target.value)}
+            />
+            {q.data?.hasDeepseekApiKey && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={clearDeepseek.isPending}
+                onClick={() => clearDeepseek.mutate()}
+              >
+                {t("settings.clearDeepseek")}
+              </Button>
+            )}
+          </div>
           <Button
             type="button"
             onClick={() => saveKeys.mutate()}
-            disabled={saveKeys.isPending || (!openaiKey.trim() && !googleKey.trim() && !claudeKey.trim())}
+            disabled={saveKeys.isPending || (!openaiKey.trim() && !googleKey.trim() && !claudeKey.trim() && !deepseekKey.trim())}
           >
             {saveKeys.isPending ? t("settings.savingKeys") : t("settings.saveKeys")}
           </Button>

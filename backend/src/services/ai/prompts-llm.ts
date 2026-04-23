@@ -21,7 +21,7 @@ function websiteContextBlock(w: WebsiteContext): string {
 }
 
 export function buildBatchTopicsPrompts(input: GenerateTopicsInput): { system: string; user: string } {
-  const { website, year, month, postsPerDay, fromDay, toDay } = input;
+  const { website, year, month, postsPerDay, fromDay, toDay, existingKeywords } = input;
   const daysInMonth = new Date(year, month, 0).getDate();
   const dStart = fromDay ?? 1;
   const dEnd = toDay ?? daysInMonth;
@@ -45,12 +45,17 @@ export function buildBatchTopicsPrompts(input: GenerateTopicsInput): { system: s
       ? `This batch covers days ${dStart}–${dEnd} only (${total} topics).`
       : `Full month: ${daysInMonth} days.`;
 
+  const existingNote =
+    existingKeywords?.length
+      ? `\n\nIMPORTANT — These primary keywords already have content. Do NOT reuse them or close variations:\n${existingKeywords.slice(0, 200).join(", ")}`
+      : "";
+
   const system = `${topicSystemPrompt}
 
 You MUST respond with valid JSON only, no markdown fences, in this exact shape:
 {"topics":[{"proposedTitle":"string","primaryKeyword":"string","secondaryKeywords":["string"],"searchIntent":"string","articleType":"string","brief":"string"}, ...]}
 
-The "topics" array MUST contain exactly ${total} items, in the same order as the schedule below (local slot 0 .. ${total - 1}). ${rangeNote}`;
+The "topics" array MUST contain exactly ${total} items, in the same order as the schedule below (local slot 0 .. ${total - 1}). ${rangeNote}${existingNote}`;
 
   const user = `${websiteContextBlock(website)}
 

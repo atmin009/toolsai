@@ -18,6 +18,7 @@ import { AiProgressBar } from "@/components/AiProgressBar";
 
 const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"] as const;
 const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"] as const;
+const DEEPSEEK_MODELS = ["deepseek-chat", "deepseek-reasoner"] as const;
 
 type WebsitePayload = {
   name: string;
@@ -40,6 +41,7 @@ type WebsitePayload = {
   aiFallbackProvider: string | null;
   hasOpenaiApiKey: boolean;
   hasGoogleApiKey: boolean;
+  hasDeepseekApiKey: boolean;
   hasWpCredentials: boolean;
   hasWpPluginKey?: boolean;
   wpSiteUrl: string | null;
@@ -79,6 +81,7 @@ export function WebsiteDetailPage() {
     aiFallbackProvider: "",
     siteOpenaiKey: "",
     siteGoogleKey: "",
+    siteDeepseekKey: "",
   });
 
   const [wp, setWp] = useState({
@@ -121,6 +124,7 @@ export function WebsiteDetailPage() {
       aiFallbackProvider: w.aiFallbackProvider ?? "",
       siteOpenaiKey: "",
       siteGoogleKey: "",
+      siteDeepseekKey: "",
     }));
     setBasic({
       name: w.name ?? "",
@@ -180,11 +184,12 @@ export function WebsiteDetailPage() {
       };
       if (ai.siteOpenaiKey.trim()) payload.openaiApiKey = ai.siteOpenaiKey.trim();
       if (ai.siteGoogleKey.trim()) payload.googleApiKey = ai.siteGoogleKey.trim();
+      if (ai.siteDeepseekKey.trim()) payload.deepseekApiKey = ai.siteDeepseekKey.trim();
       await api.patch(`/websites/${id}`, payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["website", id] });
-      setAi((a) => ({ ...a, siteOpenaiKey: "", siteGoogleKey: "" }));
+      setAi((a) => ({ ...a, siteOpenaiKey: "", siteGoogleKey: "", siteDeepseekKey: "" }));
     },
   });
 
@@ -234,6 +239,13 @@ export function WebsiteDetailPage() {
   const clearSiteGoogle = useMutation({
     mutationFn: async () => {
       await api.patch(`/websites/${id}`, { googleApiKey: null });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["website", id] }),
+  });
+
+  const clearSiteDeepseek = useMutation({
+    mutationFn: async () => {
+      await api.patch(`/websites/${id}`, { deepseekApiKey: null });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["website", id] }),
   });
@@ -520,6 +532,9 @@ export function WebsiteDetailPage() {
               <span>
                 Google: {w.hasGoogleApiKey ? <Badge variant="secondary">{t("settings.hasKey")}</Badge> : <span className="text-[var(--color-muted)]">{t("settings.noKey")}</span>}
               </span>
+              <span>
+                DeepSeek: {w.hasDeepseekApiKey ? <Badge variant="secondary">{t("settings.hasKey")}</Badge> : <span className="text-[var(--color-muted)]">{t("settings.noKey")}</span>}
+              </span>
             </div>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="min-w-0 flex-1 space-y-1">
@@ -557,6 +572,24 @@ export function WebsiteDetailPage() {
                 </Button>
               )}
             </div>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label>{t("website.siteDeepseekKey")}</Label>
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  placeholder={t("settings.keyPlaceholder")}
+                  value={ai.siteDeepseekKey}
+                  onChange={(e) => setAi((a) => ({ ...a, siteDeepseekKey: e.target.value }))}
+                  className="font-mono text-sm"
+                />
+              </div>
+              {w.hasDeepseekApiKey && (
+                <Button type="button" variant="outline" size="sm" disabled={clearSiteDeepseek.isPending} onClick={() => clearSiteDeepseek.mutate()}>
+                  {t("settings.clearDeepseek")}
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -570,6 +603,7 @@ export function WebsiteDetailPage() {
                 <option value="mock">{t("website.ai.mock")}</option>
                 <option value="openai">{t("website.ai.openai")}</option>
                 <option value="google">{t("website.ai.google")}</option>
+                <option value="deepseek">{t("website.ai.deepseek")}</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -580,8 +614,12 @@ export function WebsiteDetailPage() {
                 <>
                   <Input
                     id="website-ai-model"
-                    list={ai.aiProvider === "openai" ? "openai-models" : "gemini-models"}
-                    placeholder={ai.aiProvider === "openai" ? t("website.placeholderOpenai") : t("website.placeholderGemini")}
+                    list={ai.aiProvider === "openai" ? "openai-models" : ai.aiProvider === "deepseek" ? "deepseek-models" : "gemini-models"}
+                    placeholder={
+                      ai.aiProvider === "openai" ? t("website.placeholderOpenai")
+                        : ai.aiProvider === "deepseek" ? t("website.placeholderDeepseek")
+                          : t("website.placeholderGemini")
+                    }
                     value={ai.aiModel}
                     onChange={(e) => setAi((a) => ({ ...a, aiModel: e.target.value }))}
                     className="max-w-md font-mono text-sm"
@@ -593,6 +631,11 @@ export function WebsiteDetailPage() {
                   </datalist>
                   <datalist id="gemini-models">
                     {GEMINI_MODELS.map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                  <datalist id="deepseek-models">
+                    {DEEPSEEK_MODELS.map((m) => (
                       <option key={m} value={m} />
                     ))}
                   </datalist>

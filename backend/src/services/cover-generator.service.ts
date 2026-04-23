@@ -339,7 +339,7 @@ export async function generateCoverForArticle(
   const user = options?.userId
     ? await prisma.user.findUnique({
         where: { id: options.userId },
-        select: { openaiApiKey: true, googleApiKey: true, claudeApiKey: true },
+        select: { openaiApiKey: true, googleApiKey: true, claudeApiKey: true, deepseekApiKey: true },
       })
     : null;
 

@@ -2,10 +2,12 @@ import type { AIProvider, AIProviderId, ProviderRuntimeConfig } from "../ai-prov
 import { GoogleAIProvider } from "./google.provider";
 import { OpenAIProvider } from "./openai.provider";
 import { ClaudeAIProvider } from "./claude.provider";
+import { DeepSeekProvider } from "./deepseek.provider";
 
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 export const DEFAULT_GEMINI_MODEL = "gemini-1.5-flash";
 export const DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
+export const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
 
 /**
  * Construct a concrete LLM provider. Pass `resolvedApiKey` from website / user / env merge; otherwise env only.
@@ -31,6 +33,11 @@ export function getAIProvider(
       const key = resolvedApiKey?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
       if (!key) throw new Error("Anthropic API key not configured");
       return new ClaudeAIProvider(key, config);
+    }
+    case "deepseek": {
+      const key = resolvedApiKey?.trim() || process.env.DEEPSEEK_API_KEY?.trim();
+      if (!key) throw new Error("DeepSeek API key not configured");
+      return new DeepSeekProvider(key, config);
     }
     default:
       throw new Error("Invalid provider");
