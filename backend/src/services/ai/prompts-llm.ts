@@ -88,17 +88,30 @@ export function buildArticleJsonPrompts(input: GenerateArticleInput): { system: 
   const articleLength = options?.articleLength ?? website.defaultArticleLength ?? "standard";
   const language = options?.language ?? website.defaultLanguage ?? "en";
 
-  const system = `You are an expert SEO copywriter. Output valid JSON only (no markdown), matching this contract:
+  const lengthGuide: Record<string, string> = {
+    short: "800–1,200 words. At least 4 sections (h2). Each section must have 2+ substantial paragraphs (3–5 sentences each).",
+    standard: "1,500–2,500 words. At least 6 sections (h2) with subsections (h3) where appropriate. Each section must have 3+ substantial paragraphs (4–6 sentences each). Include examples, data, or comparisons to add depth.",
+    long: "3,000–5,000 words. At least 8–10 sections (h2) with multiple subsections (h3). Each section must have 4+ detailed paragraphs (5–7 sentences each). Include in-depth analysis, examples, case studies, step-by-step guides, comparisons, and expert insights.",
+  };
+  const guide = lengthGuide[articleLength] ?? lengthGuide.standard;
+
+  const system = `You are an expert SEO copywriter who writes comprehensive, in-depth articles. Output valid JSON only (no markdown), matching this contract:
 - seoTitle, metaTitle, metaDescription, slug, focusKeyword, secondaryKeywords[], excerpt, h1
 - outline: array of { "level": 1|2|3, "text": string }
-- bodyHtml: full HTML article (use semantic tags, h1–h3, paragraphs, lists). Lang attribute is not in JSON but write content in language "${language}".
-- faq: [{question, answer}]
+- bodyHtml: full HTML article (use semantic tags, h1–h3, <p>, <ul>/<ol>, <strong>, <em>, <blockquote>). Write in language "${language}".
+- faq: [{question, answer}] — at least 4 Q&A pairs with detailed answers (2–3 sentences each)
 - internalLinkIdeas: [{anchor, note}]
 - suggestedCta, schemaTypes (string[]), schemaSuggestion (JSON-LD string or notes), imagePrompt
 - tagsSuggestion, categoriesSuggestion (string arrays)
 - wpReadyPayload: object with useful CMS fields
 
-Article length target: ${articleLength} (short = fewer sections; long = more depth and subsections).`;
+CRITICAL WRITING RULES:
+1. Article length: ${guide}
+2. Every paragraph MUST be substantial — no one-sentence paragraphs. Each <p> should contain 3–7 sentences with real information, not filler.
+3. Use bullet/numbered lists to break up dense content, but lists supplement paragraphs — do NOT replace paragraphs with only lists.
+4. Include a compelling introduction (2–3 paragraphs) and a thorough conclusion (2+ paragraphs).
+5. Add transition sentences between sections for natural reading flow.
+6. Be specific — use concrete examples, statistics, comparisons, or actionable advice rather than vague generalities.`;
 
   const productBlock =
     topic.productMentions && topic.productMentions.length > 0
